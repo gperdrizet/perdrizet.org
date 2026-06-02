@@ -1,0 +1,246 @@
+# ============================================================
+#  Project Registry
+#
+#  This file is the single source of truth for all projects.
+#  It is partially auto-populated by tools/github-agent and
+#  partially hand-authored (for non-GitHub items, live services,
+#  etc.). The agent will NOT overwrite hand-authored fields.
+#
+#  Schema per project:
+#    name:              slug (matches GitHub repo name where applicable)
+#    display_name:      human-readable title
+#    status:            live | published | wip | archived
+#    tags:              list of technology/topic tags
+#    roles:             roles this project demonstrates (used for job tailoring)
+#                       values: llm-engineer, ml-engineer, data-scientist,
+#                               educator, backend-engineer, researcher, devops
+#    github:            full GitHub URL (omit if no repo)
+#    service_url:       URL if deployed as a live service
+#    package_url:       PyPI / DockerHub / npm URL if published
+#    description_short: 1-2 sentence card summary (LLM-generated, editable)
+#    description_long:  full project page content (LLM-generated, editable)
+#    teaching_context:  optional — how this is used in teaching
+#    highlights:        bullet points reused in resume tailoring
+#    featured:          true to pin to top of Projects page
+# ============================================================
+
+projects:
+
+  # ----------------------------------------------------------
+  #  LIVE SERVICES
+  # ----------------------------------------------------------
+
+  - name: bug-hunter
+    display_name: Bug Hunter
+    status: live
+    featured: true
+    tags: [llm, python, education, web-app, fastapi, react]
+    roles: [llm-engineer, educator]
+    github: https://github.com/gperdrizet/bug-hunter
+    service_url: https://bug-hunter.perdrizet.org
+    description_short: >
+      Educational tool for Python bug-fixing. Students are shown AI-generated
+      broken snippets and must find and fix the bug in-browser using a Monaco editor
+      with Pyodide-powered test execution.
+    description_long: ""
+    teaching_context: >
+      Used as a hands-on practice tool in Python and data science bootcamp courses.
+      Students can self-direct practice across topics (loops, functions, classes,
+      file I/O, etc.) at three difficulty levels, freeing instructor time for
+      higher-level concepts.
+    highlights:
+      - Built full-stack LLM-powered educational platform (FastAPI + React + PostgreSQL)
+      - Designed few-shot prompting pipeline to generate syntactically valid, pedagogically useful bugs across 12 Python topics
+      - Deployed as a closed-beta live service at bug-hunter.perdrizet.org with invite-code registration
+      - Implemented CI/CD pipeline with GitHub Actions (staging + production environments on self-hosted VPS)
+
+  - name: model-gateway
+    display_name: Model Gateway
+    status: live
+    featured: true
+    tags: [llm, api, inference, authentication, metering, python]
+    roles: [llm-engineer, backend-engineer]
+    github: https://github.com/gperdrizet/model-gateway
+    service_url: ""
+    description_short: >
+      An authenticated, metered API gateway for LLM inference. Provides
+      OpenAI-compatible endpoints with per-user rate limiting and usage tracking
+      over a self-hosted llama.cpp backend.
+    description_long: ""
+    teaching_context: ""
+    highlights:
+      - Designed and deployed an OpenAI-compatible LLM inference gateway with JWT authentication and per-user metering
+      - Backed by self-hosted llama.cpp server; zero external API dependency
+      - Enables students and projects to consume LLM completions without direct model access
+
+  - name: logkeep
+    display_name: Logkeep
+    status: live
+    featured: false
+    tags: [llm, curation, bookmarks, tool, python]
+    roles: [llm-engineer]
+    github: https://github.com/gperdrizet/logkeep
+    service_url: ""
+    description_short: >
+      AI-assisted link curation service. Automatically summarizes and categorizes
+      saved links using LLM inference, making it easy to build a searchable
+      personal knowledge base.
+    description_long: ""
+    teaching_context: ""
+    highlights:
+      - Built AI-powered link curation tool with automatic summarization and tagging via LLM
+
+  - name: bench
+    display_name: Bench
+    status: live
+    featured: true
+    tags: [education, platform, web-app, teaching]
+    roles: [educator]
+    github: https://github.com/gperdrizet/bench
+    service_url: ""
+    description_short: >
+      A platform for delivering technical classes taught by me, with course materials,
+      assignments, and progress tracking for data science and AI/ML topics.
+    description_long: ""
+    teaching_context: >
+      Primary platform for self-directed students outside of bootcamp environments.
+    highlights:
+      - Built and deployed a custom teaching platform for data science and AI/ML courses
+
+  - name: stegosaurus
+    display_name: Stegosaurus
+    status: live
+    featured: true
+    tags: [llm, nlp, steganography, research, python]
+    roles: [llm-engineer, researcher]
+    github: https://github.com/gperdrizet/stegosaurus
+    service_url: ""
+    description_short: >
+      Hide secret messages inside naturally-generated text using next-token
+      probability steering. Encodes information into LLM outputs by biasing
+      token selection at inference time.
+    description_long: ""
+    teaching_context: ""
+    highlights:
+      - Implemented novel steganographic encoding scheme using LLM next-token probability distributions
+      - Encodes arbitrary bit strings into fluent natural language with no perceptible signal
+
+  - name: leaderboard
+    display_name: Leaderboard
+    status: live
+    featured: false
+    tags: [education, streamlit, huggingface, competition, data-science]
+    roles: [educator, data-scientist]
+    github: https://github.com/gperdrizet/leaderboard
+    service_url: ""
+    description_short: >
+      A Kaggle-style leaderboard application for Jupyter notebook submissions,
+      built with Streamlit and designed to run on HuggingFace Spaces. Encourages
+      friendly competition in classroom settings.
+    description_long: ""
+    teaching_context: >
+      Used to gamify model performance in bootcamp ML courses — students submit
+      notebooks and see their scores ranked in real time.
+    highlights:
+      - Built Streamlit leaderboard app for classroom ML competitions, deployed on HuggingFace Spaces
+
+  # ----------------------------------------------------------
+  #  PUBLISHED RESOURCES (packages, containers, tools)
+  # ----------------------------------------------------------
+
+  - name: docker-images
+    display_name: Docker Images for AI/ML
+    status: published
+    featured: true
+    tags: [docker, devcontainer, education, devops, python, vscode]
+    roles: [educator, devops]
+    github: https://github.com/gperdrizet/docker-images
+    service_url: ""
+    package_url: ""
+    description_short: >
+      A collection of containerized development environments for AI/ML and data science
+      education, designed for use with VS Code Dev Containers. Provides reproducible,
+      zero-config setups for students.
+    description_long: ""
+    teaching_context: >
+      Distributed to bootcamp students so they have a consistent, working environment
+      from day one — no local Python/CUDA setup required.
+    highlights:
+      - Maintained a library of VS Code Dev Container images covering PyTorch, TensorFlow, and data science stacks
+      - Eliminated environment setup friction for 100+ students across multiple bootcamp cohorts
+
+  - name: postgresql-server
+    display_name: PostgreSQL Server Setup
+    status: published
+    featured: false
+    tags: [postgresql, devops, database, self-hosted, docker]
+    roles: [backend-engineer, devops]
+    github: https://github.com/gperdrizet/postgreSQL-server
+    service_url: ""
+    package_url: ""
+    description_short: >
+      A complete, production-ready PostgreSQL setup for educators, indie developers,
+      and small teams. Includes monitoring, backups, and secure configuration —
+      enterprise-quality without enterprise costs.
+    description_long: ""
+    teaching_context: ""
+    highlights:
+      - Published production-ready self-hosted PostgreSQL setup with monitoring and backup automation
+
+  - name: hill-climber
+    display_name: Hill Climber
+    status: published
+    featured: true
+    tags: [optimization, python, library, simulated-annealing, research]
+    roles: [ml-engineer, researcher]
+    github: https://github.com/gperdrizet/hill_climber
+    service_url: ""
+    package_url: ""
+    description_short: >
+      A Python package for hill climbing optimization of user-supplied objective functions,
+      with simulated annealing and parallel replica exchange. Designed for flexible
+      multi-objective optimization with multi-column dataset support.
+    description_long: ""
+    teaching_context: ""
+    highlights:
+      - Published flexible optimization library supporting simulated annealing and parallel replica exchange
+      - Objective-agnostic design allows drop-in use across diverse ML and research problems
+
+  - name: ganns-with-friends
+    display_name: GANNs with Friends
+    status: published
+    featured: true
+    tags: [deep-learning, distributed, gan, education, python, pytorch]
+    roles: [ml-engineer, educator]
+    github: https://github.com/gperdrizet/GANNs-with-friends
+    service_url: ""
+    package_url: ""
+    description_short: >
+      An educational distributed deep learning system where students become part of
+      a compute cluster to train a GAN. Teaches distributed ML concepts by making
+      each student's machine a real training node.
+    description_long: ""
+    teaching_context: >
+      Used in advanced ML courses to give students hands-on experience with distributed
+      training without needing a dedicated cluster.
+    highlights:
+      - Designed educational distributed GAN training system where student machines form a real compute cluster
+      - Taught distributed deep learning concepts through participation rather than observation
+
+  - name: ensembleset
+    display_name: EnsembleSet
+    status: published
+    featured: false
+    tags: [ml, data-science, library, python, feature-engineering, ensemble]
+    roles: [ml-engineer, data-scientist]
+    github: https://github.com/gperdrizet/ensembleset
+    service_url: ""
+    package_url: ""
+    description_short: >
+      EnsembleSet generates dataset ensembles by applying randomized sequences of
+      feature engineering methods to randomized subsets of input features.
+      A Python library for robust model evaluation and diversity-aware training.
+    description_long: ""
+    teaching_context: ""
+    highlights:
+      - Published Python library for automated ensemble dataset generation via randomized feature engineering pipelines

@@ -1,0 +1,62 @@
+# ============================================================
+#  Personal Brand Platform — Site Configuration
+#  Fork this repo? Edit THIS FILE and nothing else to start.
+# ============================================================
+
+personal:
+  name: George Perdrizet
+  tagline: "AI/ML Engineer · LLM Specialist · Educator"
+  domain: perdrizet.org
+  email: george@perdrizet.org
+  github_username: gperdrizet
+  social:
+    linkedin: https://www.linkedin.com/in/gperdrizet/
+    twitter: ""
+    bluesky: ""
+    substack: ""
+    github: https://github.com/gperdrizet
+
+# Bio shown on the About page. Supports multi-line YAML.
+bio:
+  short: >
+    AI/ML engineer and educator building LLM-powered tools and teaching
+    data science at online bootcamps. Passionate about self-hosted infrastructure,
+    open-source education, and turning research ideas into real products.
+  long: ""  # Leave blank to use short bio, or write a full narrative here.
+
+# Teaching / bootcamp experience
+teaching:
+  active: true
+  summary: >
+    Over a year of hands-on teaching experience at online bootcamps,
+    covering data science, machine learning, and AI/ML engineering.
+  platforms: []   # e.g. ["Coding Dojo", "Springboard"]
+  topics:
+    - Data Science
+    - Machine Learning
+    - AI/ML Engineering
+    - Python
+    - Deep Learning
+    - LLM Engineering
+
+# ============================================================
+#  LLM Backend
+#  Any OpenAI-compatible endpoint works: llama.cpp, Ollama,
+#  OpenAI, Anthropic proxy, etc.
+#  Secrets (api_key) should be set via environment variable
+#  LLM_API_KEY — not stored here.
+# ============================================================
+llm:
+  base_url: http://localhost:8080/v1
+  model: llama-3.1-8b
+  # api_key: set via LLM_API_KEY env var
+
+# ============================================================
+#  Deployment
+#  Sensitive values (host, user, key) go in .env / GitHub
+#  secrets — see .env.template
+# ============================================================
+deploy:
+  staging_path: /opt/perdrizet.org-staging
+  prod_path: /opt/perdrizet.org
+  staging_port: 8510

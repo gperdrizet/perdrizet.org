@@ -1,0 +1,57 @@
+# ============================================================
+#  Resume — Base (Source of Truth)
+#
+#  This file is the canonical resume. All job-specific variants
+#  are generated from here by tools/resume/tailor.py.
+#  Store in git; keep job-specific variants in data/resume-variants/
+# ============================================================
+
+meta:
+  last_updated: "2026-06-02"
+  version: "1.0.0"
+
+contact:
+  name: George Perdrizet
+  email: george@perdrizet.org
+  github: https://github.com/gperdrizet
+  linkedin: https://www.linkedin.com/in/gperdrizet/
+  website: https://perdrizet.org
+  location: ""  # city, state or "Remote"
+
+summary: >
+  AI/ML engineer and educator with deep experience building and deploying
+  LLM-powered applications, distributed systems, and educational platforms.
+  Strong track record shipping production services on self-hosted infrastructure
+  and teaching data science and AI/ML at online bootcamps.
+
+experience:
+  - title: Data Science & AI/ML Instructor
+    org: Online Bootcamps
+    location: Remote
+    start: "2024"
+    end: present
+    bullets:
+      - Taught data science, machine learning, and LLM engineering to 100+ students across multiple cohorts
+      - Designed and delivered curriculum covering Python, ML fundamentals, deep learning, and LLM APIs
+      - Built educational tools (Bug Hunter, Leaderboard, Docker Images) to enhance student learning outcomes
+      - Maintained consistent student satisfaction through hands-on, project-based teaching approach
+
+  # Add more experience entries here
+
+education: []  # Add degrees/certs here
+
+skills:
+  languages: [Python, TypeScript, SQL, Bash]
+  frameworks: [FastAPI, React, Streamlit, PyTorch, scikit-learn, LangChain]
+  llm: [llama.cpp, Ollama, OpenAI API, prompt engineering, RAG, fine-tuning]
+  infra: [Docker, Docker Compose, nginx, PostgreSQL, GitHub Actions, Linux]
+  tools: [VS Code Dev Containers, Git, Jupyter, Pandas, NumPy]
+
+projects_highlight:
+  # Slugs from data/projects.yaml to include in resume by default
+  - bug-hunter
+  - model-gateway
+  - stegosaurus
+  - hill-climber
+  - ganns-with-friends
+  - docker-images
