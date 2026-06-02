@@ -43,4 +43,4 @@ jobs:
         run: |
           ssh -p ${{ secrets.GATEKEEPER_PORT }} \
             ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
-            "curl -sf -H 'Host: site-staging.perdrizet.org' http://127.0.0.1/ -o /dev/null && echo 'Staging OK'"
+            "curl -sf http://100.64.0.1:8008/ -o /dev/null && echo 'Staging OK'"
