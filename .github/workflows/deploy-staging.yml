@@ -32,15 +32,16 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.GATEKEEPER_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.GATEKEEPER_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.GATEKEEPER_PORT }} -H "${{ secrets.GATEKEEPER_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Deploy to staging
         run: |
-          rsync -avz --delete site/dist/ \
+          rsync -avz --delete -e "ssh -p ${{ secrets.GATEKEEPER_PORT }}" site/dist/ \
             ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }}:/opt/perdrizet.org-staging/
 
       - name: Health check
         run: |
-          ssh ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
+          ssh -p ${{ secrets.GATEKEEPER_PORT }} \
+            ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
             "curl -sf --resolve site-staging.perdrizet.org:443:127.0.0.1 \
              https://site-staging.perdrizet.org/ -o /dev/null && echo 'Staging OK'"
