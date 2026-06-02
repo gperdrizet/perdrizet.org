@@ -37,13 +37,10 @@ jobs:
       - name: Deploy to staging
         run: |
           rsync -avz --delete site/dist/ \
-            ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }}:${{ secrets.STAGING_PATH }}/
-        env:
-          STAGING_PATH: /opt/perdrizet.org-staging
+            ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }}:/opt/perdrizet.org-staging/
 
       - name: Health check
         run: |
           ssh ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
-            "curl -sf http://127.0.0.1:${{ secrets.STAGING_PORT }}/ -o /dev/null && echo 'Staging OK'"
-        env:
-          STAGING_PORT: 8510
+            "curl -sf --resolve site-staging.perdrizet.org:443:127.0.0.1 \
+             https://site-staging.perdrizet.org/ -o /dev/null && echo 'Staging OK'"
