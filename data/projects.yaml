@@ -19,7 +19,7 @@
 #    package_url:       PyPI / DockerHub / npm URL if published
 #    description_short: 1-2 sentence card summary (LLM-generated, editable)
 #    description_long:  full project page content (LLM-generated, editable)
-#    teaching_context:  optional — how this is used in teaching
+#    teaching_context:  optional; how this is used in teaching
 #    highlights:        bullet points reused in resume tailoring
 #    featured:          true to pin to top of Projects page
 # ============================================================
@@ -139,7 +139,7 @@ projects:
       friendly competition in classroom settings.
     description_long: ""
     teaching_context: >
-      Used to gamify model performance in bootcamp ML courses — students submit
+      Used to gamify model performance in bootcamp ML courses; students submit
       notebooks and see their scores ranked in real time.
     highlights:
       - Built Streamlit leaderboard app for classroom ML competitions, deployed on HuggingFace Spaces
@@ -164,7 +164,7 @@ projects:
     description_long: ""
     teaching_context: >
       Distributed to bootcamp students so they have a consistent, working environment
-      from day one — no local Python/CUDA setup required.
+      from day one, no local Python/CUDA setup required.
     highlights:
       - Maintained a library of VS Code Dev Container images covering PyTorch, TensorFlow, and data science stacks
       - Eliminated environment setup friction for 100+ students across multiple bootcamp cohorts
@@ -180,7 +180,7 @@ projects:
     package_url: ""
     description_short: >
       A complete, production-ready PostgreSQL setup for educators, indie developers,
-      and small teams. Includes monitoring, backups, and secure configuration —
+      and small teams. Includes monitoring, backups, and secure configuration,
       enterprise-quality without enterprise costs.
     description_long: ""
     teaching_context: ""

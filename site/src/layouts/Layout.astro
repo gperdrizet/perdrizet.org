@@ -12,8 +12,8 @@ const { personal, bio } = config;
 
 const { title, description = bio.short } = Astro.props;
 const pageTitle = title
-  ? `${title} — ${personal.name}`
-  : `${personal.name} — ${personal.tagline}`;
+  ? `${title} | ${personal.name}`
+  : `${personal.name} | ${personal.tagline}`;
 
 const nav = [
   { href: '/', label: 'Home' },

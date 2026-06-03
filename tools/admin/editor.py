@@ -2,7 +2,7 @@
 Constrained edit operations for the site admin agent.
 
 ONLY data/config.yaml and data/projects.yaml can be read or written.
-Every operation is validated in Python — the LLM never bypasses these checks.
+Every operation is validated in Python; the LLM never bypasses these checks.
 """
 
 import base64

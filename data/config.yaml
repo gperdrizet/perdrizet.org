@@ -74,7 +74,7 @@ github_agent:
   - datascience-devcontainer
   groups:
   - name: 4geeks-academy-teaching
-    display_name: 4Geeks Academy — Course Materials
+    display_name: 4Geeks Academy - Course Materials
     description_short: 'Teaching materials, notebooks, and project templates developed
       for 4Geeks Academy data science bootcamp cohorts 9 and 12. Covers the full curriculum:
       data wrangling, ML, deep learning, NLP, and deployment.
@@ -101,7 +101,7 @@ github_agent:
     - flask_authentication
     - data-preprocessing
   - name: fullstack-academy-teaching
-    display_name: Fullstack Academy — AI/ML Course Materials
+    display_name: Fullstack Academy - AI/ML Course Materials
     description_short: 'Teaching materials and notebooks for Fullstack Academy AI/ML
       engineering bootcamp cohorts. Topics include LLM APIs, agentic frameworks, RAG,
       and MLOps.

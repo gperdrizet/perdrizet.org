@@ -1,5 +1,5 @@
 # ============================================================
-#  Resume — Base (Source of Truth)
+# Resume: Base (Source of Truth)
 #
 #  This file is the canonical resume. All job-specific variants
 #  are generated from here by tools/resume/tailor.py.

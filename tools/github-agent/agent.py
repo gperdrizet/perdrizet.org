@@ -1,5 +1,5 @@
 """
-GitHub Agent — syncs public GitHub repos into data/projects.yaml.
+"""GitHub Agent: syncs public GitHub repos into data/projects.yaml.
 
 Rules:
   - Repos already in projects.yaml are never modified.
@@ -319,7 +319,7 @@ def main() -> None:
     token = os.environ.get("GITHUB_TOKEN")
     api_key = os.environ.get("LLM_API_KEY")
 
-    # LLM client — only if key is available
+    # LLM client, only if key is available
     llm_client: OpenAI | None = None
     if api_key:
         llm_client = OpenAI(
@@ -328,7 +328,7 @@ def main() -> None:
         )
         print(f"LLM: {llm_cfg.get('model')} @ {llm_cfg.get('base_url')}")
     else:
-        print("LLM_API_KEY not set — descriptions will use GitHub description as fallback.")
+        print("LLM_API_KEY not set; descriptions will use GitHub description as fallback.")
 
     skip_list: list[str] = config.get("github_agent", {}).get("skip", [])
     groups: list[dict] = config.get("github_agent", {}).get("groups", [])

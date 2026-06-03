@@ -10,7 +10,7 @@ A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fo
 
 **Tech stack:** [Astro 5](https://astro.build) · Tailwind CSS 4 · TypeScript · GitHub Actions · nginx
 
-The site is a static Astro build deployed over rsync to a VPS. All personal data — name, bio, social links, project list, resume — lives in two YAML files. The rest of the codebase is generic. Forking means editing those files, not hunting for hardcoded strings.
+The site is a static Astro build deployed over rsync to a VPS. All personal data (name, bio, social links, project list, resume) lives in two YAML files. The rest of the codebase is generic. Forking means editing those files, not hunting for hardcoded strings.
 
 **Included:**
 - Home page with hero, featured projects, and teaching callout
@@ -20,9 +20,9 @@ The site is a static Astro build deployed over rsync to a VPS. All personal data
 - CI/CD: auto-deploy to staging on push, manual deploy to production with version tag
 
 **Planned:**
-- GitHub agent — syncs new repos into `data/projects.yaml` via GitHub API + LLM descriptions
-- Resume tailoring — gap-analysis against a job posting, rewrites bullets, exports PDF
-- Social post generator — turns project highlights into LinkedIn/Bluesky drafts
+- GitHub agent: syncs new repos into `data/projects.yaml` via GitHub API + LLM descriptions
+- Resume tailoring: gap-analysis against a job posting, rewrites bullets, exports PDF
+- Social post generator: turns project highlights into LinkedIn/Bluesky drafts
 
 ---
 
@@ -53,7 +53,7 @@ personal:
 bio:
   short: >
     One or two sentences that appear on the home page and About page.
-  long: ""   # Optional — leave blank to reuse `short`
+  long: ""   # Optional; leave blank to reuse `short`
 
 teaching:
   active: false   # Set true to show teaching section on Home + About
@@ -76,7 +76,7 @@ Add your projects. Each entry becomes a card on the Projects page and a dedicate
 
 ```yaml
 projects:
-  - name: my-project            # slug — must be URL-safe
+  - name: my-project            # slug, must be URL-safe
     display_name: My Project
     status: live                # live | published | wip | archived
     featured: true              # pins to home page
@@ -122,7 +122,7 @@ sudo mkdir -p /opt/yoursite /opt/yoursite-staging
 sudo chown youruser:youruser /opt/yoursite /opt/yoursite-staging
 ```
 
-Add nginx configs to serve both directories — see `configs/nginx/` for reference configs.
+Add nginx configs to serve both directories; see `configs/nginx/` for reference configs.
 
 ### GitHub Actions secrets
 
@@ -143,7 +143,7 @@ The deploy user's public key must be in `~/.ssh/authorized_keys` on the server.
 |----------|---------|--------|
 | **Test** | Pull request to `main` | Runs `npm ci && npm run build` |
 | **Deploy Staging** | Push to `main` or manual dispatch | `staging_path` in config |
-| **Deploy Production** | Manual dispatch — requires version tag + typing `deploy` to confirm | `prod_path` in config |
+| **Deploy Production** | Manual dispatch, requires version tag + typing `deploy` to confirm | `prod_path` in config |
 
 ### Manual deploy
 
@@ -163,4 +163,4 @@ Set `LLM_API_KEY` in your environment for the resume and social tools:
 export LLM_API_KEY=your-key-here
 ```
 
-Any OpenAI-compatible endpoint works — llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/config.yaml` under `llm:`.
+Any OpenAI-compatible endpoint works: llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/config.yaml` under `llm:`.

@@ -1,5 +1,5 @@
 """
-Site Admin Agent — FastAPI server
+Site Admin Agent: FastAPI server
 LLM-mediated content editing via GitHub API, protected by HTTP Basic auth.
 
 Start (dev):  uvicorn server:app --host 127.0.0.1 --port 8600 --reload
@@ -93,20 +93,20 @@ Help the site owner update content via natural language commands.
 
 ## What you can edit
 
-data/config.yaml — allowed dotted paths:
+data/config.yaml, allowed dotted paths:
   personal.tagline, personal.email,
   personal.social.github, personal.social.linkedin,
   personal.social.twitter, personal.social.bluesky,
   bio.short, bio.long, teaching.active, teaching.summary
 
-data/projects.yaml — per-project operations:
+data/projects.yaml, per-project operations:
   update fields: description_short, description_long, teaching_context (free text)
   set featured: true or false
   set status: active | wip | archived | published
   add a highlight bullet point
   replace the tags list
 
-## Hard limits — never do these
+## Hard limits: never do these
 - No edits outside data/ (no source code, no .astro files, no workflows, no nginx)
 - No deleting projects
 - No adding new projects (make sync-projects handles that)
@@ -135,7 +135,7 @@ For a question about current content (no change needed):
 {"reply": "...", "operation": "none"}
 
 For anything out of scope:
-{"reply": "I can only help with site content — project descriptions, bio, config fields, and tags.", "operation": "none"}
+{"reply": "I can only help with site content: project descriptions, bio, config fields, and tags.", "operation": "none"}
 
 ## Current site state
 <<<CONTEXT>>>
@@ -182,7 +182,7 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
     }.items() if not v]
     if missing:
         return JSONResponse({
-            "reply": f"Server misconfigured — set these env vars: {', '.join(missing)}",
+            "reply": f"Server misconfigured; set these env vars: {', '.join(missing)}",
             "operation": "none",
             "committed": False,
         })
@@ -230,7 +230,6 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
                     if attempt == 2:
                         raise RuntimeError(f"SHA conflict after 3 attempts: {e}")
             committed = True
-            reply += f"\n\nCommitted to `{GITHUB_BRANCH}`. Staging will rebuild automatically."
         except Exception as exc:
             reply += f"\n\n⚠️ Edit failed: {exc}"
 

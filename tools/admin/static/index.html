@@ -210,7 +210,7 @@
 </div>
 
 <div id="messages">
-  <div class="msg system-note">Describe the change you want — e.g. "Set bug-hunter as featured" or "Update my tagline to…"</div>
+  <div class="msg system-note">Describe the change you want, e.g. "Set bug-hunter as featured" or "Update my tagline to..."</div>
 </div>
 
 <footer>
@@ -327,7 +327,7 @@
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       addMsg(
-        `PR ${data.already_exists ? 'already open' : 'created'}: #${data.pr.number} — ${data.pr.url}`,
+        `PR ${data.already_exists ? 'already open' : 'created'}: #${data.pr.number} at ${data.pr.url}`,
         'system-note'
       );
     } catch (err) {
