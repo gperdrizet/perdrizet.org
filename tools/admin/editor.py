@@ -1,0 +1,201 @@
+"""
+Constrained edit operations for the site admin agent.
+
+ONLY data/config.yaml and data/projects.yaml can be read or written.
+Every operation is validated in Python — the LLM never bypasses these checks.
+"""
+
+import base64
+from typing import Any
+
+import requests
+import yaml
+
+GITHUB_API = "https://api.github.com"
+
+# Hard allow-list: the only files this tool may touch
+ALLOWED_PATHS = frozenset({"data/config.yaml", "data/projects.yaml"})
+
+# Dotted config.yaml paths the LLM may update
+ALLOWED_CONFIG_PATHS = frozenset({
+    "personal.tagline",
+    "personal.email",
+    "personal.social.github",
+    "personal.social.linkedin",
+    "personal.social.twitter",
+    "personal.social.bluesky",
+    "bio.short",
+    "bio.long",
+    "teaching.active",
+    "teaching.summary",
+})
+
+# Free-text project fields the LLM may overwrite
+ALLOWED_PROJECT_FIELDS = frozenset({
+    "description_short",
+    "description_long",
+    "teaching_context",
+})
+
+ALLOWED_STATUSES = frozenset({"active", "wip", "archived", "published"})
+
+
+# ---------------------------------------------------------------------------
+# GitHub API helpers
+# ---------------------------------------------------------------------------
+
+def _headers(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+
+
+def read_file(path: str, token: str, repo: str) -> tuple[str, str]:
+    """Fetch a file from GitHub. Returns (content, sha)."""
+    if path not in ALLOWED_PATHS:
+        raise ValueError(f"Path not allowed: {path!r}")
+    resp = requests.get(
+        f"{GITHUB_API}/repos/{repo}/contents/{path}",
+        headers=_headers(token),
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return base64.b64decode(data["content"]).decode(), data["sha"]
+
+
+def write_file(path: str, content: str, sha: str, message: str, token: str, repo: str,
+               branch: str = "main") -> None:
+    """Commit updated file content to GitHub."""
+    if path not in ALLOWED_PATHS:
+        raise ValueError(f"Path not allowed: {path!r}")
+    resp = requests.put(
+        f"{GITHUB_API}/repos/{repo}/contents/{path}",
+        headers=_headers(token),
+        json={
+            "message": message,
+            "content": base64.b64encode(content.encode()).decode(),
+            "sha": sha,
+            "branch": branch,
+        },
+        timeout=15,
+    )
+    resp.raise_for_status()
+
+
+def get_context(token: str, repo: str) -> str:
+    """Return a concise summary of current site content for the LLM system prompt."""
+    lines: list[str] = []
+
+    try:
+        raw, _ = read_file("data/config.yaml", token, repo)
+        cfg = yaml.safe_load(raw)
+        p = cfg.get("personal", {})
+        b = cfg.get("bio", {})
+        t = cfg.get("teaching", {})
+        soc = p.get("social", {})
+        lines += [
+            "### config.yaml",
+            f"personal.name:           {p.get('name', '')}",
+            f"personal.tagline:        {p.get('tagline', '')}",
+            f"personal.email:          {p.get('email', '')}",
+            f"personal.social.github:  {soc.get('github', '')}",
+            f"personal.social.linkedin:{soc.get('linkedin', '')}",
+            f"bio.short:               {str(b.get('short', ''))[:200]}",
+            f"teaching.active:         {t.get('active', False)}",
+            f"teaching.summary:        {str(t.get('summary', ''))[:200]}",
+        ]
+    except Exception as exc:
+        lines.append(f"(config.yaml unavailable: {exc})")
+
+    try:
+        raw, _ = read_file("data/projects.yaml", token, repo)
+        projects = yaml.safe_load(raw).get("projects", [])
+        lines.append("\n### projects.yaml  (name | status | featured | tags)")
+        for proj in projects:
+            lines.append(
+                f"  {proj['name']:<36} | {proj.get('status',''):<10} | "
+                f"featured:{proj.get('featured', False)} | {proj.get('tags', [])}"
+            )
+    except Exception as exc:
+        lines.append(f"(projects.yaml unavailable: {exc})")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Edit application
+# ---------------------------------------------------------------------------
+
+def apply_edit(file_content: str, intent: dict) -> tuple[str, str]:
+    """
+    Apply a validated edit intent to YAML content.
+    Returns (updated_yaml_string, human_readable_summary).
+    Raises ValueError for any disallowed or malformed operation.
+    """
+    op = intent.get("operation", "")
+    args = intent.get("args", {})
+    data = yaml.safe_load(file_content)
+
+    if op == "update_config_field":
+        path: str = args.get("path", "")
+        if path not in ALLOWED_CONFIG_PATHS:
+            raise ValueError(f"Config path not allowed: {path!r}")
+        _set_nested(data, path.split("."), args["value"])
+        summary = f"config: {path} = {str(args['value'])[:80]!r}"
+
+    elif op == "update_project_field":
+        field = args.get("field", "")
+        if field not in ALLOWED_PROJECT_FIELDS:
+            raise ValueError(f"Project field not allowed: {field!r}")
+        proj = _find_project(data, args["project"])
+        proj[field] = args["value"]
+        summary = f"{args['project']}.{field} updated"
+
+    elif op == "set_project_featured":
+        proj = _find_project(data, args["project"])
+        proj["featured"] = bool(args["value"])
+        summary = f"{args['project']}.featured = {bool(args['value'])}"
+
+    elif op == "set_project_status":
+        status_val = args.get("status", "")
+        if status_val not in ALLOWED_STATUSES:
+            raise ValueError(f"Invalid status {status_val!r}. Allowed: {sorted(ALLOWED_STATUSES)}")
+        proj = _find_project(data, args["project"])
+        proj["status"] = status_val
+        summary = f"{args['project']}.status = {status_val}"
+
+    elif op == "add_project_highlight":
+        proj = _find_project(data, args["project"])
+        if not isinstance(proj.get("highlights"), list):
+            proj["highlights"] = []
+        proj["highlights"].append(args["highlight"])
+        summary = f"added highlight to {args['project']}"
+
+    elif op == "update_project_tags":
+        tags = args.get("tags", [])
+        if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
+            raise ValueError("tags must be a list of strings")
+        proj = _find_project(data, args["project"])
+        proj["tags"] = tags
+        summary = f"{args['project']}.tags = {tags}"
+
+    else:
+        raise ValueError(f"Unknown operation: {op!r}")
+
+    return yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False), summary
+
+
+# ---------------------------------------------------------------------------
+# Internals
+# ---------------------------------------------------------------------------
+
+def _set_nested(d: dict, keys: list[str], value: Any) -> None:
+    for k in keys[:-1]:
+        d = d.setdefault(k, {})
+    d[keys[-1]] = value
+
+
+def _find_project(data: dict, name: str) -> dict:
+    for p in data.get("projects", []):
+        if p.get("name") == name:
+            return p
+    raise ValueError(f"Project not found: {name!r}")

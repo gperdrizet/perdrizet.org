@@ -1,0 +1,27 @@
+# systemd service unit for the site admin agent
+#
+# Deploy:
+#   sudo cp tools/admin/admin.service /etc/systemd/system/perdrizet-admin.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now perdrizet-admin
+#
+# The service reads secrets from /opt/perdrizet.org-admin/.env (copy your .env there).
+# The Python venv must exist at /opt/perdrizet.org-admin/.venv — build it with:
+#   python3 -m venv /opt/perdrizet.org-admin/.venv
+#   /opt/perdrizet.org-admin/.venv/bin/pip install -r /opt/perdrizet.org-admin/requirements.txt
+
+[Unit]
+Description=perdrizet.org Site Admin Agent
+After=network.target
+
+[Service]
+Type=simple
+User=siderealyear
+WorkingDirectory=/opt/perdrizet.org-admin
+EnvironmentFile=/opt/perdrizet.org-admin/.env
+ExecStart=/opt/perdrizet.org-admin/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8600
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

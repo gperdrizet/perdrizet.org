@@ -60,3 +60,89 @@ deploy:
   staging_path: /opt/perdrizet.org-staging
   prod_path: /opt/perdrizet.org
   staging_port: 8510
+
+# ============================================================
+#  GitHub Agent
+#  `skip`   — repos never imported (individual pages would add no value)
+#  `groups` — repos consolidated into a single project listing
+#  Run: make sync-projects
+#       make sync-projects ARGS="--dry-run"
+#       make sync-projects ARGS="--min-stars 1"
+# ============================================================
+github_agent:
+  skip:
+    # Springboard miniprojects (student coursework, old)
+    - clustering
+    - data-preprocessing
+    - data_wrangling_at_scale_with_spark
+    - decisiontrees-ensemble-methods
+    - linear_regression
+    - logistic_regression
+    - tree-based_algorithms
+    - PandasFromTheInside
+    - sparkML
+    - SQL_with_spark
+    - k-means
+    - k-nearest-neighbors
+    - naive-bayes
+    - regularized-linear-regression
+    - image-classification
+    - logistic-regression
+    - linear-regression
+    - time-series
+    - natural-language-processing
+    - unit-6-assignments
+    # HuggingFace Agents Course (student coursework)
+    - hf-agents-course
+    - unit-one-introduction
+    - unit-two-frameworks
+    - unit-four-final-project
+    # Low-signal scratch repos
+    - autoencoders
+    - CIFAR10
+    - tensorflow-CPU
+    - tensorflow-GPU
+    - deeplearning-CPU
+    - deeplearning-GPU
+    - deeplearning-devcontainer
+    - llms-devcontainer
+    - datascience-devcontainer
+
+  # Repos that should appear as a single consolidated project page
+  # rather than individual entries. The agent creates one entry per group
+  # (skipping individual repo pages) using the metadata defined here.
+  groups:
+    - name: 4geeks-academy-teaching
+      display_name: "4Geeks Academy — Course Materials"
+      description_short: >
+        Teaching materials, notebooks, and project templates developed for
+        4Geeks Academy data science bootcamp cohorts 9 and 12. Covers the
+        full curriculum: data wrangling, ML, deep learning, NLP, and deployment.
+      tags: [teaching, python, data-science, machine-learning, jupyter]
+      roles: [educator]
+      status: active
+      featured: false
+      repos:
+        - 4Geeks_datascience_project
+        - ds-12
+        - ds9-course-materials
+        - programming_basics
+        - recommender-system-flask
+        - recommender-system-streamlit
+        - recommender-systems
+        - flask_authentication
+        - data-preprocessing
+
+    - name: fullstack-academy-teaching
+      display_name: "Fullstack Academy — AI/ML Course Materials"
+      description_short: >
+        Teaching materials and notebooks for Fullstack Academy AI/ML engineering
+        bootcamp cohorts. Topics include LLM APIs, agentic frameworks, RAG,
+        and MLOps.
+      tags: [teaching, python, ai, llm, machine-learning]
+      roles: [educator]
+      status: active
+      featured: false
+      repos:
+        - FSA_devops
+        - fullstack-2605
