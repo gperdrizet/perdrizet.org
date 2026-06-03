@@ -48,13 +48,14 @@ def _headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
 
 
-def read_file(path: str, token: str, repo: str) -> tuple[str, str]:
+def read_file(path: str, token: str, repo: str, branch: str = "main") -> tuple[str, str]:
     """Fetch a file from GitHub. Returns (content, sha)."""
     if path not in ALLOWED_PATHS:
         raise ValueError(f"Path not allowed: {path!r}")
     resp = requests.get(
         f"{GITHUB_API}/repos/{repo}/contents/{path}",
         headers=_headers(token),
+        params={"ref": branch},
         timeout=15,
     )
     resp.raise_for_status()
@@ -78,7 +79,14 @@ def write_file(path: str, content: str, sha: str, message: str, token: str, repo
         },
         timeout=15,
     )
+    if resp.status_code == 409:
+        raise _SHAConflict(resp.text)
     resp.raise_for_status()
+
+
+class _SHAConflict(Exception):
+    """Raised when GitHub returns 409 due to a stale SHA."""
+    pass
 
 
 def get_context(token: str, repo: str) -> str:
@@ -86,7 +94,7 @@ def get_context(token: str, repo: str) -> str:
     lines: list[str] = []
 
     try:
-        raw, _ = read_file("data/config.yaml", token, repo)
+        raw, _ = read_file("data/config.yaml", token, repo, branch="main")
         cfg = yaml.safe_load(raw)
         p = cfg.get("personal", {})
         b = cfg.get("bio", {})
@@ -107,7 +115,7 @@ def get_context(token: str, repo: str) -> str:
         lines.append(f"(config.yaml unavailable: {exc})")
 
     try:
-        raw, _ = read_file("data/projects.yaml", token, repo)
+        raw, _ = read_file("data/projects.yaml", token, repo, branch="main")
         projects = yaml.safe_load(raw).get("projects", [])
         lines.append("\n### projects.yaml  (name | status | featured | tags)")
         for proj in projects:
