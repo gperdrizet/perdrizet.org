@@ -12,7 +12,10 @@ personal:
     github: https://github.com/gperdrizet
 bio:
   short: AI/ML, LLM applications and data science
-  long: ''
+  long: I am a software engineer and educator with a passion for building scalable
+    AI/ML solutions. With a background in computer science and data science, I have
+    worked on projects ranging from LLM-powered applications to educational platforms.
+    I enjoy mentoring students and sharing knowledge through open-source contributions.
 teaching:
   active: true
   summary: 'Over a year of hands-on teaching experience at online bootcamps, covering
