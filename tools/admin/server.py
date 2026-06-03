@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from pydantic import BaseModel
 
-from editor import apply_edit, get_context, read_file, write_file
+from editor import _SHAConflict, apply_edit, get_context, read_file, write_file
 
 # ---------------------------------------------------------------------------
 # .env loader (same pattern as tools/github-agent)
@@ -216,10 +216,16 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
     if operation and operation != "none":
         try:
             file_path = intent["file"]
-            content, sha = read_file(file_path, GITHUB_TOKEN, GITHUB_REPO)
-            updated, summary = apply_edit(content, intent)
-            write_file(file_path, updated, sha, f"[admin] {summary}", GITHUB_TOKEN, GITHUB_REPO,
-                       branch=GITHUB_BRANCH)
+            for attempt in range(3):
+                content, sha = read_file(file_path, GITHUB_TOKEN, GITHUB_REPO, branch=GITHUB_BRANCH)
+                updated, summary = apply_edit(content, intent)
+                try:
+                    write_file(file_path, updated, sha, f"[admin] {summary}", GITHUB_TOKEN,
+                               GITHUB_REPO, branch=GITHUB_BRANCH)
+                    break
+                except _SHAConflict as e:
+                    if attempt == 2:
+                        raise RuntimeError(f"SHA conflict after 3 attempts: {e}")
             committed = True
             reply += f"\n\nCommitted to `{GITHUB_BRANCH}`. Staging will rebuild automatically."
         except Exception as exc:
