@@ -50,7 +50,23 @@ sync-projects:
 	@cd tools/github-agent && \
 		[ -d .venv ] || python3 -m venv .venv && \
 		.venv/bin/pip install -q -r requirements.txt && \
-		.venv/bin/python agent.py
+		.venv/bin/python agent.py $(ARGS)
+
+suggest-groups:
+	@echo "Asking LLM to suggest group consolidations..."
+	@cd tools/github-agent && \
+		[ -d .venv ] || python3 -m venv .venv && \
+		.venv/bin/pip install -q -r requirements.txt && \
+		.venv/bin/python agent.py --suggest-groups
+
+# ---- Admin agent -------------------------------------------
+
+admin:
+	@echo "Starting admin agent on http://127.0.0.1:8600 ..."
+	@cd tools/admin && \
+		[ -d .venv ] || python3 -m venv .venv && \
+		.venv/bin/pip install -q -r requirements.txt && \
+		.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8600 --reload
 
 # ---- Resume ------------------------------------------------
 
