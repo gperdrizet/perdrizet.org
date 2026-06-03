@@ -5,10 +5,18 @@ A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fo
 [![Test](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml)
 [![Deploy Staging](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml)
 [![Deploy Production](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml)
+[![Admin Check](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-test.yml)
+[![Deploy Admin](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-deploy.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-deploy.yml)
 
 ## What it is
 
-**Tech stack:** [Astro 5](https://astro.build) · Tailwind CSS 4 · TypeScript · GitHub Actions · nginx
+![Astro](https://img.shields.io/badge/Astro-5-BC52EE?logo=astro&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+![nginx](https://img.shields.io/badge/nginx-009639?logo=nginx&logoColor=white)
 
 The site is a static Astro build deployed over rsync to a VPS. All personal data (name, bio, social links, project list, resume) lives in two YAML files. The rest of the codebase is generic. Forking means editing those files, not hunting for hardcoded strings.
 
