@@ -1,14 +1,12 @@
 # Personal Brand Platform
 
-A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fork it, point it at your data, and deploy. No hardcoded names, no third-party services.
+A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fork it, point it at your data, and deploy.
 
 [![Test](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml)
 [![Deploy Staging](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml)
 [![Deploy Production](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml)
 [![Admin Check](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-test.yml)
 [![Deploy Admin](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-deploy.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-deploy.yml)
-
-## What it is
 
 ![Astro](https://img.shields.io/badge/Astro-5-BC52EE?logo=astro&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
@@ -18,21 +16,20 @@ A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fo
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-009639?logo=nginx&logoColor=white)
 
-The site is a static Astro build deployed over rsync to a VPS. All personal data (name, bio, social links, project list, resume) lives in two YAML files. The rest of the codebase is generic. Forking means editing those files, not hunting for hardcoded strings.
+The site is a static Astro build deployed over rsync to a VPS. All personal data (name, bio, social links, project list, resume) lives in two YAML files. The rest of the codebase is generic.
 
 **Included:**
-- Home page with hero, featured projects, and teaching callout
+- Home page with hero and featured projects
 - Projects hub with per-project detail pages (driven by `data/projects.yaml`)
-- About page with bio and teaching section
+- About page with bio and interests
 - Contact page
+- Agent for making edits and updates to live page contents
 - CI/CD: auto-deploy to staging on push, manual deploy to production with version tag
 
 **Planned:**
 - GitHub agent: syncs new repos into `data/projects.yaml` via GitHub API + LLM descriptions
 - Resume tailoring: gap-analysis against a job posting, rewrites bullets, exports PDF
 - Social post generator: turns project highlights into LinkedIn/Bluesky drafts
-
----
 
 ## Setup
 
@@ -116,11 +113,9 @@ npm run dev
 # → http://localhost:4321
 ```
 
----
-
 ## Deployment
 
-The CI/CD pipeline mirrors the pattern used across this VPS infrastructure: rsync static files to a pre-configured nginx directory on the server.
+The CI/CD pipeline is designed for deployment to a public VPS: rsync static files to a pre-configured nginx directory on the server.
 
 ### Prerequisites on the server
 
