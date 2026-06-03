@@ -89,6 +89,62 @@ class _SHAConflict(Exception):
     pass
 
 
+# ---------------------------------------------------------------------------
+# PR and deployment operations
+# ---------------------------------------------------------------------------
+
+def get_open_pr(token: str, repo: str, head_branch: str, base_branch: str = "main") -> dict | None:
+    """Return the first open PR from head_branch → base_branch, or None."""
+    owner = repo.split("/")[0]
+    resp = requests.get(
+        f"{GITHUB_API}/repos/{repo}/pulls",
+        headers=_headers(token),
+        params={"state": "open", "head": f"{owner}:{head_branch}", "base": base_branch},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    pulls = resp.json()
+    return pulls[0] if pulls else None
+
+
+def create_pr(token: str, repo: str, head_branch: str, base_branch: str = "main",
+              title: str = "Admin agent content updates",
+              body: str = "Automated PR from the site admin agent.") -> dict:
+    """Open a PR from head_branch → base_branch. Returns the PR object."""
+    resp = requests.post(
+        f"{GITHUB_API}/repos/{repo}/pulls",
+        headers=_headers(token),
+        json={"title": title, "body": body, "head": head_branch, "base": base_branch},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def merge_pr(token: str, repo: str, pull_number: int, commit_title: str = "") -> dict:
+    """Squash-merge a PR by number. Returns the merge result object."""
+    resp = requests.put(
+        f"{GITHUB_API}/repos/{repo}/pulls/{pull_number}/merge",
+        headers=_headers(token),
+        json={"merge_method": "squash", "commit_title": commit_title or f"Admin agent: merge #{pull_number}"},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def trigger_workflow(token: str, repo: str, workflow_file: str,
+                     ref: str = "main", inputs: dict | None = None) -> None:
+    """Trigger a workflow_dispatch event."""
+    resp = requests.post(
+        f"{GITHUB_API}/repos/{repo}/actions/workflows/{workflow_file}/dispatches",
+        headers=_headers(token),
+        json={"ref": ref, "inputs": inputs or {}},
+        timeout=15,
+    )
+    resp.raise_for_status()
+
+
 def get_context(token: str, repo: str) -> str:
     """Return a concise summary of current site content for the LLM system prompt."""
     lines: list[str] = []

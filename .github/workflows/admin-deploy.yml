@@ -26,7 +26,7 @@ jobs:
 
       - name: Deploy admin agent code
         run: |
-          rsync -avz --delete \
+          rsync -avz --delete --exclude='.venv' --exclude='__pycache__' --exclude='.env' \
             -e "ssh -p ${{ secrets.GATEKEEPER_PORT }}" \
             tools/admin/ \
             ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }}:/opt/perdrizet.org-admin/
@@ -35,7 +35,8 @@ jobs:
         run: |
           ssh -p ${{ secrets.GATEKEEPER_PORT }} \
             ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
-            "/opt/perdrizet.org-admin/.venv/bin/pip install -q -r /opt/perdrizet.org-admin/requirements.txt"
+            "python3 -m venv /opt/perdrizet.org-admin/.venv && \
+             /opt/perdrizet.org-admin/.venv/bin/pip install -q -r /opt/perdrizet.org-admin/requirements.txt"
 
       - name: Restart service
         run: |
