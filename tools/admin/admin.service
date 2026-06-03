@@ -19,7 +19,7 @@ Type=simple
 User=siderealyear
 WorkingDirectory=/opt/perdrizet.org-admin
 EnvironmentFile=/opt/perdrizet.org-admin/.env
-ExecStart=/opt/perdrizet.org-admin/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8600
+ExecStart=/opt/perdrizet.org-admin/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8600 --reload --reload-dir /opt/perdrizet.org-admin
 Restart=on-failure
 RestartSec=5
 

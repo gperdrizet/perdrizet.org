@@ -38,12 +38,6 @@ jobs:
             "python3 -m venv /opt/perdrizet.org-admin/.venv && \
              /opt/perdrizet.org-admin/.venv/bin/pip install -q -r /opt/perdrizet.org-admin/requirements.txt"
 
-      - name: Restart service
-        run: |
-          ssh -p ${{ secrets.GATEKEEPER_PORT }} \
-            ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
-            "sudo systemctl restart perdrizet-admin"
-
       - name: Health check
         run: |
           ssh -p ${{ secrets.GATEKEEPER_PORT }} \
