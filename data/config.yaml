@@ -11,11 +11,7 @@ personal:
     substack: ''
     github: https://github.com/gperdrizet
 bio:
-  short: 'AI/ML engineer and educator building LLM-powered tools and teaching data
-    science at online bootcamps. Passionate about self-hosted infrastructure, open-source
-    education, and turning research ideas into real products.
-
-    '
+  short: AI/ML, LLM applications and data science
   long: ''
 teaching:
   active: true
