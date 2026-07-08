@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 from openai import OpenAI
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString
@@ -43,26 +44,10 @@ CONFIG_PATH = CONTENT_ROOT / "config.yaml"
 PROJECTS_PATH = CONTENT_ROOT / "projects.yaml"
 
 # ---------------------------------------------------------------------------
-# Load .env from repo root (if present) without requiring python-dotenv
+# Load .env from repo root (if present)
 # ---------------------------------------------------------------------------
 
-def _load_dotenv(path: Path) -> None:
-    """Parse a .env file and set missing environment variables."""
-    if not path.is_file():
-        return
-    with path.open() as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-            if key and key not in os.environ:
-                os.environ[key] = value
-
-
-_load_dotenv(REPO_ROOT / ".env")
+load_dotenv(REPO_ROOT / ".env", override=False)
 
 # ---------------------------------------------------------------------------
 # Config loading
@@ -72,7 +57,7 @@ def load_config() -> dict:
     if not CONFIG_PATH.exists():
         raise FileNotFoundError(f"Missing required config file: {CONFIG_PATH}")
     safe_yaml = YAML(typ="safe")
-    with open(CONFIG_PATH) as f:
+    with open(CONFIG_PATH, encoding="utf-8") as f:
         return safe_yaml.load(f)
 
 
@@ -248,7 +233,7 @@ def load_projects_yaml() -> tuple[YAML, dict]:
     ryaml = YAML()
     ryaml.preserve_quotes = True
     ryaml.width = 120
-    with open(PROJECTS_PATH) as f:
+    with open(PROJECTS_PATH, encoding="utf-8") as f:
         data = ryaml.load(f)
     return ryaml, data
 
@@ -426,7 +411,7 @@ def main() -> None:
             added.append(repo["name"])
 
     if not args.dry_run and added:
-        with open(PROJECTS_PATH, "w") as f:
+        with open(PROJECTS_PATH, "w", encoding="utf-8") as f:
             ryaml.dump(data, f)
         print(f"\nWrote {len(added)} new entry(s) to {PROJECTS_PATH.relative_to(REPO_ROOT)}")
         print("Review and fill in: roles, featured, highlights, teaching_context")
