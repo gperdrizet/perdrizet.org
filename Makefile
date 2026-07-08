@@ -80,17 +80,17 @@ tailor-resume:
 # ---- Deploy (manual) ---------------------------------------
 
 deploy-staging: build
-	@if [ -z "$$GATEKEEPER_USER" ] || [ -z "$$GATEKEEPER_HOST" ]; then \
-		echo "Error: set GATEKEEPER_USER and GATEKEEPER_HOST in .env"; exit 1; \
+	@if [ -z "$$VPS_USER" ] || [ -z "$$VPS_HOST" ]; then \
+		echo "Error: set VPS_USER and VPS_HOST in .env"; exit 1; \
 	fi
 	rsync -avz --delete site/dist/ \
-		$$GATEKEEPER_USER@$$GATEKEEPER_HOST:/opt/perdrizet.org-staging/
+		$$VPS_USER@$$VPS_HOST:/opt/perdrizet.org-staging/
 
 deploy-prod: build
-	@if [ -z "$$GATEKEEPER_USER" ] || [ -z "$$GATEKEEPER_HOST" ]; then \
-		echo "Error: set GATEKEEPER_USER and GATEKEEPER_HOST in .env"; exit 1; \
+	@if [ -z "$$VPS_USER" ] || [ -z "$$VPS_HOST" ]; then \
+		echo "Error: set VPS_USER and VPS_HOST in .env"; exit 1; \
 	fi
 	@read -p "Deploy to PRODUCTION at perdrizet.org? [y/N] " confirm; \
 		[ "$$confirm" = "y" ] || { echo "Aborted."; exit 1; }
 	rsync -avz --delete site/dist/ \
-		$$GATEKEEPER_USER@$$GATEKEEPER_HOST:/opt/perdrizet.org/
+		$$VPS_USER@$$VPS_HOST:/opt/perdrizet.org/
