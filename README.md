@@ -5,8 +5,6 @@ A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fo
 [![Test](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml)
 [![Deploy Staging](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml)
 [![Deploy Production](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml)
-[![Admin Check](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-test.yml)
-[![Deploy Admin](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-deploy.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/admin-deploy.yml)
 
 ![Astro](https://img.shields.io/badge/Astro-5-BC52EE?logo=astro&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)

@@ -279,23 +279,20 @@ def append_entry(data: dict, entry: dict) -> None:
     data["projects"].append(entry)
 
 
-def make_group_entry(group: dict) -> dict:
-    """Build a single consolidated project entry for a group of repos."""
+def make_group_entry(group: dict, owner: str) -> dict:
+    """Build a collection entry for a group of repos."""
     description = group.get("description_short", "").strip()
+    members = [{"repo": f"{owner}/{repo_name}"} for repo_name in group.get("repos", [])]
     return {
+        "kind": "collection",
+        "type": "group",
         "name": group["name"],
         "display_name": group["display_name"],
-        "status": group.get("status", "active"),
         "featured": group.get("featured", False),
         "tags": group.get("tags", []),
         "roles": group.get("roles", []),
-        "github": None,
-        "service_url": None,
-        "package_url": None,
-        "description_short": LiteralScalarString(description + "\n") if description else "",
-        "description_long": "",
-        "teaching_context": "",
-        "highlights": [],
+        "summary": LiteralScalarString(description + "\n") if description else "",
+        "members": members,
     }
 
 
@@ -364,8 +361,7 @@ def main() -> None:
         print(f"  {len(repos)} after applying skip list")
 
     if grouped_repos:
-        repos = [r for r in repos if r["name"] not in grouped_repos]
-        print(f"  {len(repos)} after removing group-consolidated repos")
+        print(f"  {len(grouped_repos)} repo(s) are referenced by configured groups")
 
     if args.min_stars > 0:
         repos = [r for r in repos if (r.get("stargazers_count") or 0) >= args.min_stars]
@@ -387,7 +383,7 @@ def main() -> None:
     # --- Consolidated group entries ---
     for group in new_groups:
         print(f"\n  [group] {group['name']}")
-        entry = make_group_entry(group)
+        entry = make_group_entry(group, username)
         if args.dry_run:
             print(f"    [dry-run] would add consolidated entry: {entry['display_name']}")
             print(f"    repos: {', '.join(group.get('repos', []))}")

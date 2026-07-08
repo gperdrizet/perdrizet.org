@@ -28,6 +28,7 @@ ALLOWED_CONFIG_PATHS = frozenset({
     "bio.long",
     "teaching.active",
     "teaching.summary",
+    "home_sections",
 })
 
 # Free-text project fields the LLM may overwrite
@@ -35,6 +36,15 @@ ALLOWED_PROJECT_FIELDS = frozenset({
     "description_short",
     "description_long",
     "teaching_context",
+})
+
+ALLOWED_COLLECTION_FIELDS = frozenset({
+    "summary",
+    "description_short",
+    "description_long",
+    "type",
+    "topics",
+    "platforms",
 })
 
 ALLOWED_STATUSES = frozenset({"active", "wip", "archived", "published"})
@@ -173,10 +183,12 @@ def get_context(token: str, repo: str) -> str:
     try:
         raw, _ = read_file("data/projects.yaml", token, repo, branch="main")
         projects = yaml.safe_load(raw).get("projects", [])
-        lines.append("\n### projects.yaml  (name | status | featured | tags)")
+        lines.append("\n### projects.yaml  (kind | name | status/type | featured | tags)")
         for proj in projects:
+            kind = proj.get("kind", "project")
+            status_or_type = proj.get("status", "") if kind == "project" else proj.get("type", "")
             lines.append(
-                f"  {proj['name']:<36} | {proj.get('status',''):<10} | "
+                f"  {kind:<10} | {proj['name']:<28} | {status_or_type:<10} | "
                 f"featured:{proj.get('featured', False)} | {proj.get('tags', [])}"
             )
     except Exception as exc:
@@ -242,6 +254,72 @@ def apply_edit(file_content: str, intent: dict) -> tuple[str, str]:
         proj["tags"] = tags
         summary = f"{args['project']}.tags = {tags}"
 
+    elif op == "update_collection_field":
+        field = args.get("field", "")
+        if field not in ALLOWED_COLLECTION_FIELDS:
+            raise ValueError(f"Collection field not allowed: {field!r}")
+        coll = _find_collection(data, args["collection"])
+        if field in {"topics", "platforms"}:
+            value = args.get("value", [])
+            if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+                raise ValueError(f"{field} must be a list of strings")
+            coll[field] = value
+        else:
+            coll[field] = args["value"]
+        summary = f"{args['collection']}.{field} updated"
+
+    elif op == "set_collection_featured":
+        coll = _find_collection(data, args["collection"])
+        coll["featured"] = bool(args["value"])
+        summary = f"{args['collection']}.featured = {bool(args['value'])}"
+
+    elif op == "update_collection_tags":
+        tags = args.get("tags", [])
+        if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
+            raise ValueError("tags must be a list of strings")
+        coll = _find_collection(data, args["collection"])
+        coll["tags"] = tags
+        summary = f"{args['collection']}.tags = {tags}"
+
+    elif op == "update_collection_roles":
+        roles = args.get("roles", [])
+        if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+            raise ValueError("roles must be a list of strings")
+        coll = _find_collection(data, args["collection"])
+        coll["roles"] = roles
+        summary = f"{args['collection']}.roles = {roles}"
+
+    elif op == "update_collection_members":
+        members = args.get("members", [])
+        if not isinstance(members, list):
+            raise ValueError("members must be a list")
+        normalized: list[dict[str, str]] = []
+        for member in members:
+            if not isinstance(member, dict):
+                raise ValueError("each member must be an object")
+            if "project" in member:
+                if not isinstance(member["project"], str):
+                    raise ValueError("member.project must be a string")
+                normalized.append({"project": member["project"]})
+            elif "repo" in member:
+                if not isinstance(member["repo"], str):
+                    raise ValueError("member.repo must be a string")
+                repo_member = {"repo": member["repo"]}
+                if "label" in member:
+                    if not isinstance(member["label"], str):
+                        raise ValueError("member.label must be a string")
+                    repo_member["label"] = member["label"]
+                if "url" in member:
+                    if not isinstance(member["url"], str):
+                        raise ValueError("member.url must be a string")
+                    repo_member["url"] = member["url"]
+                normalized.append(repo_member)
+            else:
+                raise ValueError("member must include either project or repo")
+        coll = _find_collection(data, args["collection"])
+        coll["members"] = normalized
+        summary = f"{args['collection']}.members updated"
+
     else:
         raise ValueError(f"Unknown operation: {op!r}")
 
@@ -260,6 +338,13 @@ def _set_nested(d: dict, keys: list[str], value: Any) -> None:
 
 def _find_project(data: dict, name: str) -> dict:
     for p in data.get("projects", []):
-        if p.get("name") == name:
+        if p.get("name") == name and p.get("kind", "project") != "collection":
             return p
     raise ValueError(f"Project not found: {name!r}")
+
+
+def _find_collection(data: dict, name: str) -> dict:
+    for p in data.get("projects", []):
+        if p.get("name") == name and p.get("kind") == "collection":
+            return p
+    raise ValueError(f"Collection not found: {name!r}")

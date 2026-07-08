@@ -1,11 +1,24 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getConfig } from '../lib/config';
-import { getFeaturedProjects } from '../lib/projects';
+import { getCollectionBySlug, getFeaturedProjects, resolveCollectionProjects } from '../lib/projects';
 
 const config = getConfig();
-const { personal, bio, teaching } = config;
+const { personal, bio } = config;
 const featured = getFeaturedProjects();
+const homeSections = (config.home_sections ?? [])
+  .map((section) => {
+    const collection = getCollectionBySlug(section.collection);
+    if (!collection) {
+      return null;
+    }
+    return {
+      ...section,
+      collection,
+      projects: resolveCollectionProjects(collection),
+    };
+  })
+  .filter((section): section is NonNullable<typeof section> => section !== null);
 
 const statusColors: Record<string, string> = {
   live: 'bg-green-100 text-green-700',
@@ -91,30 +104,48 @@ const statusColors: Record<string, string> = {
     </div>
   </section>
 
-  <!-- Teaching callout -->
-  {teaching.active && (
+  {homeSections.map((section) => (
     <section class="bg-slate-50 border-y border-slate-200">
       <div class="max-w-5xl mx-auto px-6 py-16 flex flex-col sm:flex-row items-start gap-10">
         <div class="flex-1">
-          <h2 class="text-xl font-bold text-slate-900 mb-3">Teaching & Education</h2>
-          <p class="text-slate-600 leading-relaxed mb-5">{teaching.summary}</p>
-          <div class="flex flex-wrap gap-2">
-            {teaching.topics.map((topic) => (
+          <h2 class="text-xl font-bold text-slate-900 mb-3">
+            {section.title ?? section.collection.display_name}
+          </h2>
+          <p class="text-slate-600 leading-relaxed mb-5">
+            {section.summary ?? section.collection.summary ?? section.collection.description_short ?? ''}
+          </p>
+          <div class="flex flex-wrap gap-2 mb-5">
+            {(section.collection.tags ?? []).map((tag) => (
               <span class="text-xs bg-white border border-slate-200 text-slate-600 px-3 py-1 rounded-full">
-                {topic}
+                {tag}
               </span>
             ))}
           </div>
+          {section.projects.length > 0 && (
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {section.projects.slice(0, 4).map((project) => (
+                <a
+                  href={`/projects/${project.name}`}
+                  class="group border border-slate-200 bg-white rounded-lg p-4 hover:border-indigo-300 transition-all"
+                >
+                  <h3 class="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors mb-1">
+                    {project.display_name}
+                  </h3>
+                  <p class="text-xs text-slate-600">{project.description_short}</p>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
         <div class="sm:shrink-0 sm:pt-1">
           <a
-            href="/about"
+            href={`/projects/${section.collection.name}`}
             class="inline-block border border-slate-300 hover:border-indigo-400 text-slate-700 hover:text-indigo-600 font-medium px-5 py-2.5 rounded-lg text-sm transition-colors"
           >
-            Learn more →
+            Open collection →
           </a>
         </div>
       </div>
     </section>
-  )}
+  ))}
 </Layout>

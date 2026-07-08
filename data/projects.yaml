@@ -244,3 +244,33 @@ projects:
     teaching_context: ""
     highlights:
       - Published Python library for automated ensemble dataset generation via randomized feature engineering pipelines
+
+  - kind: collection
+    type: teaching
+    name: teaching-education
+    display_name: Teaching & Education
+    featured: false
+    tags: [teaching, education, data-science, machine-learning, ai]
+    roles: [educator]
+    summary: >
+      Teaching initiatives and course assets, including live classroom tools,
+      curriculum projects, and supporting repositories used in AI/ML instruction.
+    topics:
+      - Data Science
+      - Machine Learning
+      - AI/ML Engineering
+      - Python
+      - Deep Learning
+      - LLM Engineering
+    members:
+      - project: bug-hunter
+      - project: bench
+      - project: leaderboard
+      - project: docker-images
+      - project: ganns-with-friends
+      - repo: gperdrizet/4Geeks_datascience_project
+        label: 4Geeks Academy Project Materials
+      - repo: gperdrizet/ds-12
+        label: 4Geeks DS12 Cohort Materials
+      - repo: gperdrizet/fullstack-2605
+        label: Fullstack Academy 2605 Materials

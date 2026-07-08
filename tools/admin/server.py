@@ -57,7 +57,7 @@ ADMIN_USER     = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 GITHUB_TOKEN   = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO    = os.environ.get("GITHUB_REPO", "")   # owner/repo  e.g. gperdrizet/perdrizet.org
-GITHUB_BRANCH  = os.environ.get("GITHUB_BRANCH", "main")
+GITHUB_BRANCH  = os.environ.get("GITHUB_BRANCH", "dev")
 LLM_API_KEY    = os.environ.get("LLM_API_KEY", "")
 LLM_BASE_URL   = os.environ.get("LLM_BASE_URL", "http://localhost:8080/v1")
 LLM_MODEL      = os.environ.get("LLM_MODEL", "llama-3.1-8b")
@@ -97,7 +97,8 @@ data/config.yaml, allowed dotted paths:
   personal.tagline, personal.email,
   personal.social.github, personal.social.linkedin,
   personal.social.twitter, personal.social.bluesky,
-  bio.short, bio.long, teaching.active, teaching.summary
+    bio.short, bio.long, teaching.active, teaching.summary,
+    home_sections
 
 data/projects.yaml, per-project operations:
   update fields: description_short, description_long, teaching_context (free text)
@@ -106,11 +107,20 @@ data/projects.yaml, per-project operations:
   add a highlight bullet point
   replace the tags list
 
+data/projects.yaml, per-collection operations (kind: collection):
+    update fields: summary, description_short, description_long, type,
+                                 topics (list), platforms (list)
+    set featured: true or false
+    replace tags list
+    replace roles list
+    replace members list (member objects with project or repo)
+
 ## Hard limits: never do these
 - No edits outside data/ (no source code, no .astro files, no workflows, no nginx)
 - No deleting projects
 - No adding new projects (make sync-projects handles that)
 - No changing project names or github URLs
+- No changing collection slugs (name)
 
 ## Output format
 ALWAYS respond with a single valid JSON object. No markdown fences, no preamble.
@@ -130,12 +140,17 @@ Operations and their args:
   set_project_status    -> {"project": "project-slug", "status": "active"}
   add_project_highlight -> {"project": "project-slug", "highlight": "Reduced latency by 40%"}
   update_project_tags   -> {"project": "project-slug", "tags": ["python", "docker"]}
+    update_collection_field   -> {"collection": "collection-slug", "field": "summary", "value": "..."}
+    set_collection_featured   -> {"collection": "collection-slug", "value": true}
+    update_collection_tags    -> {"collection": "collection-slug", "tags": ["teaching", "python"]}
+    update_collection_roles   -> {"collection": "collection-slug", "roles": ["educator"]}
+    update_collection_members -> {"collection": "collection-slug", "members": [{"project": "bug-hunter"}, {"repo": "owner/repo", "label": "Repo label"}]}
 
 For a question about current content (no change needed):
 {"reply": "...", "operation": "none"}
 
 For anything out of scope:
-{"reply": "I can only help with site content: project descriptions, bio, config fields, and tags.", "operation": "none"}
+{"reply": "I can only help with site content: project and collection content, bio, config fields, tags, roles, and collection members.", "operation": "none"}
 
 ## Current site state
 <<<CONTEXT>>>

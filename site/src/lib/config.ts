@@ -35,6 +35,11 @@ export interface SiteConfig {
     platforms: string[];
     topics: string[];
   };
+  home_sections?: Array<{
+    collection: string;
+    title?: string;
+    summary?: string;
+  }>;
   llm: {
     base_url: string;
     model: string;
