@@ -43,52 +43,6 @@
     .btn-ghost:hover { border-color: #64748b; color: #e2e8f0; }
     .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* Deploy toolbar */
-    #deploy-bar {
-      padding: 0.6rem 1.25rem;
-      background: #0f172a;
-      border-bottom: 1px solid #1e293b;
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      flex-shrink: 0;
-      flex-wrap: wrap;
-    }
-    #pr-status {
-      font-size: 0.75rem;
-      color: #64748b;
-      margin-right: auto;
-    }
-    #pr-status a { color: #60a5fa; text-decoration: none; }
-    #pr-status a:hover { text-decoration: underline; }
-
-    .btn-action {
-      border: none;
-      border-radius: 0.375rem;
-      padding: 0.3rem 0.85rem;
-      cursor: pointer;
-      font-size: 0.78rem;
-      font-weight: 500;
-      transition: opacity 0.15s;
-      white-space: nowrap;
-    }
-    .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-pr    { background: #1d4ed8; color: #fff; }
-    .btn-merge { background: #16a34a; color: #fff; }
-    .btn-deploy { background: #9333ea; color: #fff; }
-    .btn-action:not(:disabled):hover { opacity: 0.85; }
-
-    #version-input {
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #f1f5f9;
-      border-radius: 0.375rem;
-      padding: 0.28rem 0.6rem;
-      font-size: 0.78rem;
-      width: 7rem;
-    }
-    #version-input:focus { outline: none; border-color: #9333ea; }
-
     #messages {
       flex: 1;
       overflow-y: auto;
@@ -201,14 +155,6 @@
   </div>
 </header>
 
-<div id="deploy-bar">
-  <span id="pr-status">checking PR…</span>
-  <button class="btn-action btn-pr"     id="prBtn">Create PR</button>
-  <button class="btn-action btn-merge"  id="mergeBtn" disabled>Merge PR</button>
-  <input  id="version-input" placeholder="v1.2.3" />
-  <button class="btn-action btn-deploy" id="deployBtn">Deploy</button>
-</div>
-
 <div id="messages">
   <div class="msg system-note">Describe the change you want, e.g. "Set bug-hunter as featured" or "Update my tagline to..."</div>
 </div>
@@ -223,11 +169,6 @@
   const inputEl   = document.getElementById('input');
   const sendBtn   = document.getElementById('sendBtn');
   const clearBtn  = document.getElementById('clearBtn');
-  const prBtn     = document.getElementById('prBtn');
-  const mergeBtn  = document.getElementById('mergeBtn');
-  const deployBtn = document.getElementById('deployBtn');
-  const prStatus  = document.getElementById('pr-status');
-  const versionEl = document.getElementById('version-input');
 
   // ── Chat ──────────────────────────────────────────────────────────────────
 
@@ -267,10 +208,7 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       pending.textContent = data.reply;
-      if (data.committed) {
-        pending.classList.add('committed');
-        refreshPrStatus();
-      }
+      if (data.committed) pending.classList.add('committed');
     } catch (err) {
       pending.textContent = `Error: ${err.message}`;
       pending.style.color = '#f87171';
@@ -293,94 +231,6 @@
     await fetch('/chat/history', { method: 'DELETE' });
     msgsEl.innerHTML = '<div class="msg system-note">History cleared.</div>';
   });
-
-  // ── PR status ─────────────────────────────────────────────────────────────
-
-  let currentPr = null;
-
-  async function refreshPrStatus() {
-    try {
-      const res = await fetch('/pr/status');
-      const data = await res.json();
-      currentPr = data.pr;
-      if (currentPr) {
-        prStatus.innerHTML = `Open PR: <a href="${currentPr.url}" target="_blank">#${currentPr.number} ${currentPr.title}</a>`;
-        prBtn.disabled = true;
-        mergeBtn.disabled = false;
-      } else {
-        prStatus.textContent = 'No open PR';
-        prBtn.disabled = false;
-        mergeBtn.disabled = true;
-      }
-    } catch {
-      prStatus.textContent = 'PR status unavailable';
-    }
-  }
-
-  // ── Create PR ─────────────────────────────────────────────────────────────
-
-  prBtn.addEventListener('click', async () => {
-    prBtn.disabled = true;
-    prStatus.textContent = 'Creating PR…';
-    try {
-      const res = await fetch('/pr/create', { method: 'POST' });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      addMsg(
-        `PR ${data.already_exists ? 'already open' : 'created'}: #${data.pr.number} at ${data.pr.url}`,
-        'system-note'
-      );
-    } catch (err) {
-      addMsg(`PR create failed: ${err.message}`, 'system-note');
-    } finally {
-      await refreshPrStatus();
-    }
-  });
-
-  // ── Merge PR ──────────────────────────────────────────────────────────────
-
-  mergeBtn.addEventListener('click', async () => {
-    if (!confirm(`Merge PR #${currentPr?.number} into main? This will trigger the staging deploy.`)) return;
-    mergeBtn.disabled = true;
-    prStatus.textContent = 'Merging…';
-    try {
-      const res = await fetch('/pr/merge', { method: 'POST' });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      addMsg(`PR merged. Staging deploy triggered automatically.`, 'system-note');
-    } catch (err) {
-      addMsg(`Merge failed: ${err.message}`, 'system-note');
-    } finally {
-      await refreshPrStatus();
-    }
-  });
-
-  // ── Deploy to production ──────────────────────────────────────────────────
-
-  deployBtn.addEventListener('click', async () => {
-    const version = versionEl.value.trim();
-    if (!version) { versionEl.focus(); return; }
-    if (!confirm(`Deploy ${version} to production?`)) return;
-    deployBtn.disabled = true;
-    try {
-      const res = await fetch('/deploy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      addMsg(`Production deploy triggered for ${version}. Check GitHub Actions for progress.`, 'system-note');
-      versionEl.value = '';
-    } catch (err) {
-      addMsg(`Deploy failed: ${err.message}`, 'system-note');
-    } finally {
-      deployBtn.disabled = false;
-    }
-  });
-
-  // ── Init ──────────────────────────────────────────────────────────────────
-  refreshPrStatus();
 </script>
 </body>
 </html>

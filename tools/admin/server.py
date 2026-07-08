@@ -22,8 +22,7 @@ from pydantic import BaseModel
 
 from editor import (
     CONTENT_CONFIG_PATH, CONTENT_PROJECTS_PATH,
-    _SHAConflict, apply_edit, create_pr, get_context, get_open_pr,
-    merge_pr, read_file, trigger_workflow, write_file,
+    _SHAConflict, apply_edit, get_context, read_file, write_file,
 )
 
 # ---------------------------------------------------------------------------
@@ -56,9 +55,6 @@ _load_dotenv(REPO_ROOT / ".env")
 
 ADMIN_USER     = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-GITHUB_TOKEN   = os.environ.get("GITHUB_TOKEN", "")
-GITHUB_REPO    = os.environ.get("GITHUB_REPO", "")   # owner/repo  e.g. gperdrizet/perdrizet.org
-GITHUB_BRANCH  = os.environ.get("GITHUB_BRANCH", "dev")
 LLM_API_KEY    = os.environ.get("LLM_API_KEY", "")
 LLM_BASE_URL   = os.environ.get("LLM_BASE_URL", "http://localhost:8080/v1")
 LLM_MODEL      = os.environ.get("LLM_MODEL", "llama-3.1-8b")
@@ -201,8 +197,6 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
 
     # Validate required config
     missing = [k for k, v in {
-        "GITHUB_TOKEN": GITHUB_TOKEN,
-        "GITHUB_REPO":  GITHUB_REPO,
         "LLM_API_KEY":  LLM_API_KEY,
     }.items() if not v]
     if missing:
@@ -214,9 +208,9 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
 
     llm = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
 
-    # Fetch live context from GitHub for every turn (keeps it fresh)
+    # Fetch live local context for every turn (keeps it fresh)
     try:
-        context = get_context(GITHUB_TOKEN, GITHUB_REPO, branch=GITHUB_BRANCH)
+        context = get_context()
     except Exception as exc:
         context = f"(could not fetch site state: {exc})"
 
@@ -245,15 +239,14 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
         try:
             file_path = _operation_file(operation)
             for attempt in range(3):
-                content, sha = read_file(file_path, GITHUB_TOKEN, GITHUB_REPO, branch=GITHUB_BRANCH)
+                content, sha = read_file(file_path)
                 updated, summary = apply_edit(content, intent)
                 try:
-                    write_file(file_path, updated, sha, f"[admin] {summary}", GITHUB_TOKEN,
-                               GITHUB_REPO, branch=GITHUB_BRANCH)
+                    write_file(file_path, updated, sha, f"[admin] {summary}")
                     break
                 except _SHAConflict as e:
                     if attempt == 2:
-                        raise RuntimeError(f"SHA conflict after 3 attempts: {e}")
+                        raise RuntimeError(f"SHA conflict after 3 attempts: {e}") from e
             committed = True
         except Exception as exc:
             reply += f"\n\n⚠️ Edit failed: {exc}"
@@ -267,69 +260,6 @@ async def clear_history() -> dict:
     global conversation
     conversation = []
     return {"cleared": True}
-
-
-# ---------------------------------------------------------------------------
-# PR and deployment endpoints
-# ---------------------------------------------------------------------------
-
-@app.get("/pr/status")
-async def pr_status(_user: str = Depends(require_auth)) -> JSONResponse:
-    """Return the current open PR from GITHUB_BRANCH → main, if any."""
-    try:
-        pr = get_open_pr(GITHUB_TOKEN, GITHUB_REPO, GITHUB_BRANCH)
-        if pr:
-            return JSONResponse({"pr": {"number": pr["number"], "title": pr["title"],
-                                        "url": pr["html_url"], "state": pr["state"]}})
-        return JSONResponse({"pr": None})
-    except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
-
-
-@app.post("/pr/create")
-async def pr_create(_user: str = Depends(require_auth)) -> JSONResponse:
-    """Open a PR from GITHUB_BRANCH → main."""
-    try:
-        existing = get_open_pr(GITHUB_TOKEN, GITHUB_REPO, GITHUB_BRANCH)
-        if existing:
-            return JSONResponse({"pr": {"number": existing["number"], "title": existing["title"],
-                                        "url": existing["html_url"]}, "already_exists": True})
-        pr = create_pr(GITHUB_TOKEN, GITHUB_REPO, GITHUB_BRANCH)
-        return JSONResponse({"pr": {"number": pr["number"], "title": pr["title"],
-                                    "url": pr["html_url"]}, "already_exists": False})
-    except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
-
-
-@app.post("/pr/merge")
-async def pr_merge(_user: str = Depends(require_auth)) -> JSONResponse:
-    """Merge the open PR from GITHUB_BRANCH → main."""
-    try:
-        pr = get_open_pr(GITHUB_TOKEN, GITHUB_REPO, GITHUB_BRANCH)
-        if not pr:
-            return JSONResponse({"error": "No open PR found."}, status_code=404)
-        result = merge_pr(GITHUB_TOKEN, GITHUB_REPO, pr["number"])
-        return JSONResponse({"merged": result.get("merged", False), "message": result.get("message", "")})
-    except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
-
-
-class DeployRequest(BaseModel):
-    version: str
-
-
-@app.post("/deploy")
-async def deploy_production(req: DeployRequest, _user: str = Depends(require_auth)) -> JSONResponse:
-    """Trigger the production deploy workflow."""
-    version = req.version.strip()
-    if not version:
-        return JSONResponse({"error": "version is required"}, status_code=400)
-    try:
-        trigger_workflow(GITHUB_TOKEN, GITHUB_REPO, "deploy-prod.yml",
-                         inputs={"version": version, "confirm": "deploy"})
-        return JSONResponse({"triggered": True, "version": version})
-    except Exception as exc:
-        return JSONResponse({"error": str(exc)}, status_code=500)
 
 
 @app.get("/health")

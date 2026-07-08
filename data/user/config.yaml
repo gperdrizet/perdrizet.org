@@ -25,8 +25,7 @@ teaching:
   platforms: []
   topics: []
 
-home_sections:
-  - collection: teaching-education
+home_sections: []
 
 llm:
   base_url: http://localhost:8080/v1

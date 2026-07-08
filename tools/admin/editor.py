@@ -5,14 +5,14 @@ Only content YAML files are editable.
 Every operation is validated in Python; the LLM never bypasses these checks.
 """
 
-import base64
+import hashlib
 import os
+from pathlib import Path
 from typing import Any
 
-import requests
 import yaml
 
-GITHUB_API = "https://api.github.com"
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 CONTENT_ROOT = os.environ.get("CONTENT_ROOT", "data/user").strip("/")
 CONTENT_CONFIG_PATH = f"{CONTENT_ROOT}/config.yaml"
@@ -59,111 +59,46 @@ ALLOWED_STATUSES = frozenset({"active", "wip", "archived", "published"})
 
 
 # ---------------------------------------------------------------------------
-# GitHub API helpers
+# Local file helpers
 # ---------------------------------------------------------------------------
 
-def _headers(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-
-
-def read_file(path: str, token: str, repo: str, branch: str = "main") -> tuple[str, str]:
-    """Fetch a file from GitHub. Returns (content, sha)."""
+def _resolve_path(path: str) -> Path:
     if path not in ALLOWED_PATHS:
         raise ValueError(f"Path not allowed: {path!r}")
-    resp = requests.get(
-        f"{GITHUB_API}/repos/{repo}/contents/{path}",
-        headers=_headers(token),
-        params={"ref": branch},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    return base64.b64decode(data["content"]).decode(), data["sha"]
+    return REPO_ROOT / path
 
 
-def write_file(path: str, content: str, sha: str, message: str, token: str, repo: str,
-               branch: str = "main") -> None:
-    """Commit updated file content to GitHub."""
-    if path not in ALLOWED_PATHS:
-        raise ValueError(f"Path not allowed: {path!r}")
-    resp = requests.put(
-        f"{GITHUB_API}/repos/{repo}/contents/{path}",
-        headers=_headers(token),
-        json={
-            "message": message,
-            "content": base64.b64encode(content.encode()).decode(),
-            "sha": sha,
-            "branch": branch,
-        },
-        timeout=15,
-    )
-    if resp.status_code == 409:
-        raise _SHAConflict(resp.text)
-    resp.raise_for_status()
+def _hash_content(content: str) -> str:
+    return hashlib.sha256(content.encode()).hexdigest()
+
+
+def read_file(path: str, _token: str = "", _repo: str = "", _branch: str = "main") -> tuple[str, str]:
+    """Fetch a local file. Returns (content, hash)."""
+    file_path = _resolve_path(path)
+    if not file_path.exists():
+        raise FileNotFoundError(f"Missing content file: {path}")
+    content = file_path.read_text(encoding="utf-8")
+    return content, _hash_content(content)
+
+
+def write_file(path: str, content: str, sha: str, _message: str = "", _token: str = "", _repo: str = "",
+               _branch: str = "main") -> None:
+    """Write updated content to a local file with optimistic hash check."""
+    file_path = _resolve_path(path)
+    current = file_path.read_text(encoding="utf-8") if file_path.exists() else ""
+    current_hash = _hash_content(current)
+    if current and current_hash != sha:
+        raise _SHAConflict("stale content hash")
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(content, encoding="utf-8")
 
 
 class _SHAConflict(Exception):
-    """Raised when GitHub returns 409 due to a stale SHA."""
-    pass
+    """Raised when local file content has changed between read and write."""
 
 
 # ---------------------------------------------------------------------------
-# PR and deployment operations
-# ---------------------------------------------------------------------------
-
-def get_open_pr(token: str, repo: str, head_branch: str, base_branch: str = "main") -> dict | None:
-    """Return the first open PR from head_branch → base_branch, or None."""
-    owner = repo.split("/")[0]
-    resp = requests.get(
-        f"{GITHUB_API}/repos/{repo}/pulls",
-        headers=_headers(token),
-        params={"state": "open", "head": f"{owner}:{head_branch}", "base": base_branch},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    pulls = resp.json()
-    return pulls[0] if pulls else None
-
-
-def create_pr(token: str, repo: str, head_branch: str, base_branch: str = "main",
-              title: str = "Admin agent content updates",
-              body: str = "Automated PR from the site admin agent.") -> dict:
-    """Open a PR from head_branch → base_branch. Returns the PR object."""
-    resp = requests.post(
-        f"{GITHUB_API}/repos/{repo}/pulls",
-        headers=_headers(token),
-        json={"title": title, "body": body, "head": head_branch, "base": base_branch},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json()
-
-
-def merge_pr(token: str, repo: str, pull_number: int, commit_title: str = "") -> dict:
-    """Squash-merge a PR by number. Returns the merge result object."""
-    resp = requests.put(
-        f"{GITHUB_API}/repos/{repo}/pulls/{pull_number}/merge",
-        headers=_headers(token),
-        json={"merge_method": "squash", "commit_title": commit_title or f"Admin agent: merge #{pull_number}"},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json()
-
-
-def trigger_workflow(token: str, repo: str, workflow_file: str,
-                     ref: str = "main", inputs: dict | None = None) -> None:
-    """Trigger a workflow_dispatch event."""
-    resp = requests.post(
-        f"{GITHUB_API}/repos/{repo}/actions/workflows/{workflow_file}/dispatches",
-        headers=_headers(token),
-        json={"ref": ref, "inputs": inputs or {}},
-        timeout=15,
-    )
-    resp.raise_for_status()
-
-
-def get_context(token: str, repo: str, branch: str = "main") -> str:
+def get_context(token: str = "", repo: str = "", branch: str = "main") -> str:
     """Return a concise summary of current site content for the LLM system prompt."""
     lines: list[str] = []
     config_path, projects_path = CONTENT_CONFIG_PATH, CONTENT_PROJECTS_PATH
