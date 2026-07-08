@@ -1,6 +1,6 @@
 # ============================================================
-#  perdrizet.org — Project Makefile
-#  Common tasks for development, data sync, and deployment.
+#  DotProfile — Project Makefile
+#  Common tasks for development, data sync, and direct deployment.
 # ============================================================
 
 .DEFAULT_GOAL := help
@@ -10,7 +10,7 @@
 
 help:
 	@echo ""
-	@echo "  perdrizet.org — Personal Brand Platform"
+	@echo "  DotProfile"
 	@echo ""
 	@echo "  Setup"
 	@echo "    make setup            Interactive first-time setup wizard"
@@ -25,7 +25,7 @@ help:
 	@echo "  Resume"
 	@echo "    make tailor-resume    Tailor resume to a job posting"
 	@echo ""
-	@echo "  Deploy (CI/CD does this automatically, but you can run manually)"
+	@echo "  Deploy (direct to VPS)"
 	@echo "    make deploy-staging   rsync dist/ to staging on gatekeeper"
 	@echo "    make deploy-prod      rsync dist/ to production on gatekeeper"
 	@echo ""

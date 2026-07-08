@@ -1,20 +1,17 @@
-# Personal Brand Platform
+# DotProfile
 
-A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fork it, point it at your data, and deploy.
+A self-hosted personal profile platform for builders. Run it locally, edit your own content, and deploy directly to your VPS.
 
-[![Test](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml)
-[![Deploy Staging](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml)
-[![Deploy Production](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml)
+[![Test](https://github.com/gperdrizet/dotprofile/actions/workflows/test.yml/badge.svg)](https://github.com/gperdrizet/dotprofile/actions/workflows/test.yml)
 
 ![Astro](https://img.shields.io/badge/Astro-5-BC52EE?logo=astro&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-009639?logo=nginx&logoColor=white)
 
-The site is a static Astro build deployed over rsync to a VPS. Platform/demo data lives in `data/*.yaml`; fork-owned personal data lives in `data/user/*.yaml`.
+The site is a static Astro build deployed over rsync to a VPS. Platform/demo data lives in `data/*.yaml`; runtime content lives in `data/user/*.yaml`.
 
 **Included:**
 - Home page with hero and featured projects
@@ -22,7 +19,7 @@ The site is a static Astro build deployed over rsync to a VPS. Platform/demo dat
 - About page with bio and interests
 - Contact page
 - Agent for making edits and updates to live page contents
-- CI/CD: auto-deploy to staging on push, manual deploy to production with version tag
+- Direct deployment commands for staging and production
 
 **Planned:**
 - GitHub agent: syncs new repos into `data/user/projects.yaml` via GitHub API + LLM descriptions
@@ -31,11 +28,11 @@ The site is a static Astro build deployed over rsync to a VPS. Platform/demo dat
 
 ## Setup
 
-### 1. Fork and clone
+### 1. Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_FORK.git
-cd YOUR_FORK
+git clone https://github.com/gperdrizet/dotprofile.git
+cd dotprofile
 ```
 
 ### 2. Edit `data/user/config.yaml`
@@ -113,7 +110,7 @@ npm run dev
 
 ## Deployment
 
-The CI/CD pipeline is designed for deployment to a public VPS: rsync static files to a pre-configured nginx directory on the server.
+Deploy directly from your machine to a public VPS using rsync. This is the only supported deployment path in this repository.
 
 ### Prerequisites on the server
 
@@ -125,36 +122,28 @@ sudo chown youruser:youruser /opt/yoursite /opt/yoursite-staging
 
 Add nginx configs to serve both directories; see `configs/nginx/` for reference configs.
 
-### GitHub Actions secrets
+### Local environment
 
-Set these in both a `staging` and a `production` GitHub Actions environment (Settings → Environments):
+Set deploy variables in `.env`:
 
-| Secret | Value |
-|--------|-------|
-| `GATEKEEPER_HOST` | Your server's public IP |
-| `GATEKEEPER_USER` | SSH username |
-| `GATEKEEPER_PORT` | SSH port (22 if standard) |
-| `GATEKEEPER_SSH_KEY` | Private key for the deploy user |
+```bash
+GATEKEEPER_HOST=your-server-ip
+GATEKEEPER_USER=your-ssh-user
+```
 
-The deploy user's public key must be in `~/.ssh/authorized_keys` on the server.
+Your SSH key must already be trusted by the server via `~/.ssh/authorized_keys`.
 
-### Workflows
-
-| Workflow | Trigger | Target |
-|----------|---------|--------|
-| **Test** | Pull request to `main` | Runs `npm ci && npm run build` |
-| **Deploy Staging** | Push to `main` or manual dispatch | `staging_path` in config |
-| **Deploy Production** | Manual dispatch, requires version tag + typing `deploy` to confirm | `prod_path` in config |
-
-### Manual deploy
+### Deploy commands
 
 ```bash
 # Staging
-gh workflow run deploy-staging.yml
+make deploy-staging
 
-# Production (via GitHub UI or CLI)
-gh workflow run deploy-prod.yml -f version=v1.0.0 -f confirm=deploy
+# Production (interactive confirmation)
+make deploy-prod
 ```
+
+`make deploy-prod` prompts for confirmation before uploading.
 
 ### LLM tools (optional)
 
@@ -166,10 +155,9 @@ export LLM_API_KEY=your-key-here
 
 Any OpenAI-compatible endpoint works: llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/user/config.yaml` under `llm:`.
 
-## Upstream Sync Safety
+## Scope
 
-Your fork should only store personal data in `data/user/*.yaml`.
+DotProfile intentionally does not document or support GitHub Actions-based deployment.
 
-- Upstream platform updates should touch code and demo files, not your `data/user/*.yaml` files.
-- Merging upstream into your fork updates platform code without replacing your portfolio content.
-- `data/user/config.yaml` and `data/user/projects.yaml` are required runtime files.
+- Supported: local development, local testing, direct VPS deploy.
+- Optional for users: adapt this to any CI/CD path they prefer.
