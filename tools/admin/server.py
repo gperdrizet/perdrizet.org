@@ -21,6 +21,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from editor import (
+    CONTENT_CONFIG_PATH, CONTENT_PROJECTS_PATH,
     _SHAConflict, apply_edit, create_pr, get_context, get_open_pr,
     merge_pr, read_file, trigger_workflow, write_file,
 )
@@ -93,21 +94,21 @@ Help the site owner update content via natural language commands.
 
 ## What you can edit
 
-data/config.yaml, allowed dotted paths:
+<<<CONFIG_PATH>>>, allowed dotted paths:
   personal.tagline, personal.email,
   personal.social.github, personal.social.linkedin,
   personal.social.twitter, personal.social.bluesky,
     bio.short, bio.long, teaching.active, teaching.summary,
     home_sections
 
-data/projects.yaml, per-project operations:
+<<<PROJECTS_PATH>>>, per-project operations:
   update fields: description_short, description_long, teaching_context (free text)
   set featured: true or false
   set status: active | wip | archived | published
   add a highlight bullet point
   replace the tags list
 
-data/projects.yaml, per-collection operations (kind: collection):
+<<<PROJECTS_PATH>>>, per-collection operations (kind: collection):
     update fields: summary, description_short, description_long, type,
                                  topics (list), platforms (list)
     set featured: true or false
@@ -128,7 +129,7 @@ ALWAYS respond with a single valid JSON object. No markdown fences, no preamble.
 For a content edit:
 {
   "reply": "human-readable description of the change being made",
-  "file": "data/config.yaml" | "data/projects.yaml",
+    "file": "<<<CONFIG_PATH>>>" | "<<<PROJECTS_PATH>>>",
   "operation": "<operation name>",
   "args": { ... }
 }
@@ -158,7 +159,16 @@ For anything out of scope:
 
 
 def build_system_prompt(context: str) -> str:
-    return _SYSTEM_PROMPT_TEMPLATE.replace("<<<CONTEXT>>>", context)
+    prompt = _SYSTEM_PROMPT_TEMPLATE.replace("<<<CONTEXT>>>", context)
+    prompt = prompt.replace("<<<CONFIG_PATH>>>", CONTENT_CONFIG_PATH)
+    prompt = prompt.replace("<<<PROJECTS_PATH>>>", CONTENT_PROJECTS_PATH)
+    return prompt
+
+
+def _operation_file(operation: str) -> str:
+    if operation == "update_config_field":
+        return CONTENT_CONFIG_PATH
+    return CONTENT_PROJECTS_PATH
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +216,7 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
 
     # Fetch live context from GitHub for every turn (keeps it fresh)
     try:
-        context = get_context(GITHUB_TOKEN, GITHUB_REPO)
+        context = get_context(GITHUB_TOKEN, GITHUB_REPO, branch=GITHUB_BRANCH)
     except Exception as exc:
         context = f"(could not fetch site state: {exc})"
 
@@ -233,7 +243,7 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
 
     if operation and operation != "none":
         try:
-            file_path = intent["file"]
+            file_path = _operation_file(operation)
             for attempt in range(3):
                 content, sha = read_file(file_path, GITHUB_TOKEN, GITHUB_REPO, branch=GITHUB_BRANCH)
                 updated, summary = apply_edit(content, intent)

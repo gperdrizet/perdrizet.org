@@ -1,12 +1,13 @@
 /**
- * Loads and types data/config.yaml for use in Astro pages and components.
+ * Loads and types site config YAML for use in Astro pages and components.
+ * Reads only data/user/config.yaml.
  * Import this instead of reading the YAML file directly.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 
-const CONFIG_PATH = path.resolve(process.cwd(), '../data/config.yaml');
+const USER_CONFIG_PATH = path.resolve(process.cwd(), '../data/user/config.yaml');
 
 export interface SocialLinks {
   linkedin?: string;
@@ -55,7 +56,10 @@ let _config: SiteConfig | null = null;
 
 export function getConfig(): SiteConfig {
   if (!_config) {
-    const raw = fs.readFileSync(CONFIG_PATH, 'utf-8');
+    if (!fs.existsSync(USER_CONFIG_PATH)) {
+      throw new Error('Missing required file: data/user/config.yaml');
+    }
+    const raw = fs.readFileSync(USER_CONFIG_PATH, 'utf-8');
     _config = yaml.load(raw) as SiteConfig;
   }
   return _config;

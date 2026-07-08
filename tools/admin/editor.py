@@ -1,11 +1,12 @@
 """
 Constrained edit operations for the site admin agent.
 
-ONLY data/config.yaml and data/projects.yaml can be read or written.
+Only content YAML files are editable.
 Every operation is validated in Python; the LLM never bypasses these checks.
 """
 
 import base64
+import os
 from typing import Any
 
 import requests
@@ -13,8 +14,15 @@ import yaml
 
 GITHUB_API = "https://api.github.com"
 
-# Hard allow-list: the only files this tool may touch
-ALLOWED_PATHS = frozenset({"data/config.yaml", "data/projects.yaml"})
+CONTENT_ROOT = os.environ.get("CONTENT_ROOT", "data/user").strip("/")
+CONTENT_CONFIG_PATH = f"{CONTENT_ROOT}/config.yaml"
+CONTENT_PROJECTS_PATH = f"{CONTENT_ROOT}/projects.yaml"
+
+# Hard allow-list: content files only
+ALLOWED_PATHS = frozenset({
+    CONTENT_CONFIG_PATH,
+    CONTENT_PROJECTS_PATH,
+})
 
 # Dotted config.yaml paths the LLM may update
 ALLOWED_CONFIG_PATHS = frozenset({
@@ -155,19 +163,20 @@ def trigger_workflow(token: str, repo: str, workflow_file: str,
     resp.raise_for_status()
 
 
-def get_context(token: str, repo: str) -> str:
+def get_context(token: str, repo: str, branch: str = "main") -> str:
     """Return a concise summary of current site content for the LLM system prompt."""
     lines: list[str] = []
+    config_path, projects_path = CONTENT_CONFIG_PATH, CONTENT_PROJECTS_PATH
 
     try:
-        raw, _ = read_file("data/config.yaml", token, repo, branch="main")
+        raw, _ = read_file(config_path, token, repo, branch=branch)
         cfg = yaml.safe_load(raw)
         p = cfg.get("personal", {})
         b = cfg.get("bio", {})
         t = cfg.get("teaching", {})
         soc = p.get("social", {})
         lines += [
-            "### config.yaml",
+            f"### {config_path}",
             f"personal.name:           {p.get('name', '')}",
             f"personal.tagline:        {p.get('tagline', '')}",
             f"personal.email:          {p.get('email', '')}",
@@ -178,12 +187,12 @@ def get_context(token: str, repo: str) -> str:
             f"teaching.summary:        {str(t.get('summary', ''))[:200]}",
         ]
     except Exception as exc:
-        lines.append(f"(config.yaml unavailable: {exc})")
+        lines.append(f"({config_path} unavailable: {exc})")
 
     try:
-        raw, _ = read_file("data/projects.yaml", token, repo, branch="main")
+        raw, _ = read_file(projects_path, token, repo, branch=branch)
         projects = yaml.safe_load(raw).get("projects", [])
-        lines.append("\n### projects.yaml  (kind | name | status/type | featured | tags)")
+        lines.append(f"\n### {projects_path}  (kind | name | status/type | featured | tags)")
         for proj in projects:
             kind = proj.get("kind", "project")
             status_or_type = proj.get("status", "") if kind == "project" else proj.get("type", "")
@@ -192,7 +201,7 @@ def get_context(token: str, repo: str) -> str:
                 f"featured:{proj.get('featured', False)} | {proj.get('tags', [])}"
             )
     except Exception as exc:
-        lines.append(f"(projects.yaml unavailable: {exc})")
+        lines.append(f"({projects_path} unavailable: {exc})")
 
     return "\n".join(lines)
 

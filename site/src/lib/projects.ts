@@ -1,11 +1,12 @@
 /**
- * Loads and types data/projects.yaml for use in Astro pages and components.
+ * Loads and types project YAML for use in Astro pages and components.
+ * Reads only data/user/projects.yaml.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 
-const PROJECTS_PATH = path.resolve(process.cwd(), '../data/projects.yaml');
+const USER_PROJECTS_PATH = path.resolve(process.cwd(), '../data/user/projects.yaml');
 
 export type ProjectStatus = 'live' | 'published' | 'wip' | 'archived';
 
@@ -73,7 +74,10 @@ let _entries: ContentEntry[] | null = null;
 
 function getEntries(): ContentEntry[] {
   if (!_entries) {
-    const raw = fs.readFileSync(PROJECTS_PATH, 'utf-8');
+    if (!fs.existsSync(USER_PROJECTS_PATH)) {
+      throw new Error('Missing required file: data/user/projects.yaml');
+    }
+    const raw = fs.readFileSync(USER_PROJECTS_PATH, 'utf-8');
     const data = yaml.load(raw) as ProjectsFile;
     _entries = data.projects ?? [];
   }

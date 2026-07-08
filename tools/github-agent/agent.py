@@ -1,5 +1,4 @@
-"""
-"""GitHub Agent: syncs public GitHub repos into data/projects.yaml.
+"""GitHub Agent: syncs public GitHub repos into the active projects file.
 
 Rules:
   - Repos already in projects.yaml are never modified.
@@ -10,7 +9,7 @@ Rules:
 Usage:
   python agent.py [--include-forks] [--dry-run]
 
-Configuration is read from ../../data/config.yaml.
+Configuration is read from the active config file.
 LLM API key is read from the LLM_API_KEY environment variable.
 Optional GitHub token: GITHUB_TOKEN env var (raises rate limit from 60 to 5000 req/hr).
 """
@@ -31,8 +30,9 @@ from ruamel.yaml.scalarstring import LiteralScalarString
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CONFIG_PATH = REPO_ROOT / "data" / "config.yaml"
-PROJECTS_PATH = REPO_ROOT / "data" / "projects.yaml"
+CONTENT_ROOT = os.environ.get("CONTENT_ROOT", "data/user").strip("/")
+CONFIG_PATH = REPO_ROOT / CONTENT_ROOT / "config.yaml"
+PROJECTS_PATH = REPO_ROOT / CONTENT_ROOT / "projects.yaml"
 
 # ---------------------------------------------------------------------------
 # Load .env from repo root (if present) without requiring python-dotenv
@@ -61,6 +61,8 @@ _load_dotenv(REPO_ROOT / ".env")
 # ---------------------------------------------------------------------------
 
 def load_config() -> dict:
+    if not CONFIG_PATH.exists():
+        raise FileNotFoundError(f"Missing required config file: {CONFIG_PATH}")
     with open(CONFIG_PATH) as f:
         return pyyaml.safe_load(f)
 
@@ -232,6 +234,8 @@ def suggest_groups(client: OpenAI, model: str, repos: list[dict]) -> str:
 
 def load_projects_yaml() -> tuple[YAML, dict]:
     """Load projects.yaml preserving comments. Returns (ryaml instance, data)."""
+    if not PROJECTS_PATH.exists():
+        raise FileNotFoundError(f"Missing required projects file: {PROJECTS_PATH}")
     ryaml = YAML()
     ryaml.preserve_quotes = True
     ryaml.width = 120
@@ -301,7 +305,7 @@ def make_group_entry(group: dict, owner: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Sync GitHub repos to data/projects.yaml")
+    parser = argparse.ArgumentParser(description="Sync GitHub repos to the active projects file")
     parser.add_argument("--include-forks", action="store_true", help="Include forked repos")
     parser.add_argument("--dry-run", action="store_true", help="Print changes without writing")
     parser.add_argument("--min-stars", type=int, default=0, help="Skip repos with fewer than N stars")
@@ -352,7 +356,7 @@ def main() -> None:
             repo["_topics"] = fetch_repo_topics(repo, token)
         print("  Asking LLM for group suggestions...\n")
         yaml_snippet = suggest_groups(llm_client, llm_cfg.get("model", ""), candidate_repos)
-        print("# ---- Suggested groups (paste into data/config.yaml under github_agent.groups) ----")
+        print(f"# ---- Suggested groups (paste into {CONFIG_PATH.relative_to(REPO_ROOT)} under github_agent.groups) ----")
         print(yaml_snippet)
         return
 

@@ -14,18 +14,18 @@ A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fo
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-009639?logo=nginx&logoColor=white)
 
-The site is a static Astro build deployed over rsync to a VPS. All personal data (name, bio, social links, project list, resume) lives in two YAML files. The rest of the codebase is generic.
+The site is a static Astro build deployed over rsync to a VPS. Platform/demo data lives in `data/*.yaml`; fork-owned personal data lives in `data/user/*.yaml`.
 
 **Included:**
 - Home page with hero and featured projects
-- Projects hub with per-project detail pages (driven by `data/projects.yaml`)
+- Projects hub with per-project detail pages (driven by `data/user/projects.yaml`)
 - About page with bio and interests
 - Contact page
 - Agent for making edits and updates to live page contents
 - CI/CD: auto-deploy to staging on push, manual deploy to production with version tag
 
 **Planned:**
-- GitHub agent: syncs new repos into `data/projects.yaml` via GitHub API + LLM descriptions
+- GitHub agent: syncs new repos into `data/user/projects.yaml` via GitHub API + LLM descriptions
 - Resume tailoring: gap-analysis against a job posting, rewrites bullets, exports PDF
 - Social post generator: turns project highlights into LinkedIn/Bluesky drafts
 
@@ -38,7 +38,7 @@ git clone https://github.com/YOUR_USERNAME/YOUR_FORK.git
 cd YOUR_FORK
 ```
 
-### 2. Edit `data/config.yaml`
+### 2. Edit `data/user/config.yaml`
 
 This is the only file you need to change for a basic deployment. Everything flows from here.
 
@@ -73,7 +73,7 @@ deploy:
   prod_path: /opt/yoursite
 ```
 
-### 3. Edit `data/projects.yaml`
+### 3. Edit `data/user/projects.yaml`
 
 Add your projects. Each entry becomes a card on the Projects page and a dedicated `/projects/<name>` page.
 
@@ -164,4 +164,12 @@ Set `LLM_API_KEY` in your environment for the resume and social tools:
 export LLM_API_KEY=your-key-here
 ```
 
-Any OpenAI-compatible endpoint works: llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/config.yaml` under `llm:`.
+Any OpenAI-compatible endpoint works: llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/user/config.yaml` under `llm:`.
+
+## Upstream Sync Safety
+
+Your fork should only store personal data in `data/user/*.yaml`.
+
+- Upstream platform updates should touch code and demo files, not your `data/user/*.yaml` files.
+- Merging upstream into your fork updates platform code without replacing your portfolio content.
+- `data/user/config.yaml` and `data/user/projects.yaml` are required runtime files.
