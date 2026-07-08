@@ -2,8 +2,6 @@
 
 A self-hosted personal profile platform for builders. Run it locally, edit your own content, and deploy directly to your VPS.
 
-[![Test](https://github.com/gperdrizet/dotprofile/actions/workflows/test.yml/badge.svg)](https://github.com/gperdrizet/dotprofile/actions/workflows/test.yml)
-
 ![Astro](https://img.shields.io/badge/Astro-5-BC52EE?logo=astro&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
