@@ -16,9 +16,9 @@ The site is a static Astro build deployed over rsync to a VPS. Platform/demo dat
 **Included:**
 - Home page with hero and featured projects
 - Projects hub with per-project detail pages (driven by `data/user/projects.yaml`)
-- About page with bio and interests
+- About page with configurable collection sections
 - Contact page
-- Agent for making edits and updates to live page contents
+- Local admin agent for making edits to runtime YAML content
 - Direct deployment commands for staging and production
 
 **Planned:**
@@ -55,11 +55,8 @@ bio:
     One or two sentences that appear on the home page and About page.
   long: ""   # Optional; leave blank to reuse `short`
 
-teaching:
-  active: false   # Set true to show teaching section on Home + About
-  summary: ""
-  platforms: []
-  topics: []
+home_sections: []
+about_sections: []
 
 llm:
   base_url: http://localhost:8080/v1   # Any OpenAI-compatible endpoint
@@ -91,6 +88,18 @@ projects:
       - Resume bullet point two
 ```
 
+Collection sections on Home/About are fully configurable in `data/user/config.yaml` by listing collection slugs:
+
+```yaml
+home_sections:
+  - collection: speaking
+    title: Speaking
+
+about_sections:
+  - collection: open-source
+    title: Open Source
+```
+
 ### 4. Install dependencies
 
 Requires Node 22+. Install with [fnm](https://github.com/Schniz/fnm) or nvm.
@@ -107,6 +116,15 @@ cd site
 npm run dev
 # → http://localhost:4321
 ```
+
+### 6. Run admin locally (optional)
+
+```bash
+make admin
+# → http://127.0.0.1:8600
+```
+
+The admin UI edits local files in `data/user/` directly.
 
 ## Deployment
 

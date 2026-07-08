@@ -16,16 +16,10 @@ bio:
     I build practical software, ship small experiments quickly, and write about what
     I learn.
   long: >
-    This is demo content for the platform repository. Replace with your own profile
-    in your fork.
-
-teaching:
-  active: false
-  summary: ''
-  platforms: []
-  topics: []
+    This is demo content for the platform repository. Replace with your own profile.
 
 home_sections: []
+about_sections: []
 
 llm:
   base_url: http://localhost:8080/v1

@@ -34,9 +34,8 @@ ALLOWED_CONFIG_PATHS = frozenset({
     "personal.social.bluesky",
     "bio.short",
     "bio.long",
-    "teaching.active",
-    "teaching.summary",
     "home_sections",
+    "about_sections",
 })
 
 # Free-text project fields the LLM may overwrite
@@ -72,8 +71,9 @@ def _hash_content(content: str) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-def read_file(path: str, _token: str = "", _repo: str = "", _branch: str = "main") -> tuple[str, str]:
+def read_file(path: str, token: str = "", repo: str = "", branch: str = "main") -> tuple[str, str]:
     """Fetch a local file. Returns (content, hash)."""
+    del token, repo, branch
     file_path = _resolve_path(path)
     if not file_path.exists():
         raise FileNotFoundError(f"Missing content file: {path}")
@@ -81,9 +81,10 @@ def read_file(path: str, _token: str = "", _repo: str = "", _branch: str = "main
     return content, _hash_content(content)
 
 
-def write_file(path: str, content: str, sha: str, _message: str = "", _token: str = "", _repo: str = "",
-               _branch: str = "main") -> None:
+def write_file(path: str, content: str, sha: str, message: str = "", token: str = "", repo: str = "",
+               branch: str = "main") -> None:
     """Write updated content to a local file with optimistic hash check."""
+    del message, token, repo, branch
     file_path = _resolve_path(path)
     current = file_path.read_text(encoding="utf-8") if file_path.exists() else ""
     current_hash = _hash_content(current)
@@ -108,7 +109,6 @@ def get_context(token: str = "", repo: str = "", branch: str = "main") -> str:
         cfg = yaml.safe_load(raw)
         p = cfg.get("personal", {})
         b = cfg.get("bio", {})
-        t = cfg.get("teaching", {})
         soc = p.get("social", {})
         lines += [
             f"### {config_path}",
@@ -118,8 +118,8 @@ def get_context(token: str = "", repo: str = "", branch: str = "main") -> str:
             f"personal.social.github:  {soc.get('github', '')}",
             f"personal.social.linkedin:{soc.get('linkedin', '')}",
             f"bio.short:               {str(b.get('short', ''))[:200]}",
-            f"teaching.active:         {t.get('active', False)}",
-            f"teaching.summary:        {str(t.get('summary', ''))[:200]}",
+            f"home_sections:           {cfg.get('home_sections', [])}",
+            f"about_sections:          {cfg.get('about_sections', [])}",
         ]
     except Exception as exc:
         lines.append(f"({config_path} unavailable: {exc})")

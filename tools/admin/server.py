@@ -94,8 +94,8 @@ Help the site owner update content via natural language commands.
   personal.tagline, personal.email,
   personal.social.github, personal.social.linkedin,
   personal.social.twitter, personal.social.bluesky,
-    bio.short, bio.long, teaching.active, teaching.summary,
-    home_sections
+        bio.short, bio.long,
+        home_sections, about_sections
 
 <<<PROJECTS_PATH>>>, per-project operations:
   update fields: description_short, description_long, teaching_context (free text)

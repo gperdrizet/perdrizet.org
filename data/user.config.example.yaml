@@ -17,13 +17,8 @@ bio:
     One or two sentences that appear on the home page and About page.
   long: ''
 
-teaching:
-  active: false
-  summary: ''
-  platforms: []
-  topics: []
-
 home_sections: []
+about_sections: []
 
 llm:
   base_url: http://localhost:8080/v1

@@ -1,13 +1,25 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getConfig } from '../lib/config';
-import { getCollections, resolveCollectionProjects } from '../lib/projects';
+import { getCollectionBySlug, resolveCollectionProjects } from '../lib/projects';
 
 const config = getConfig();
 const { personal, bio } = config;
 
 const bioText = bio.long?.trim() ? bio.long : bio.short;
-const teachingCollections = getCollections().filter((c) => c.type === 'teaching');
+const aboutSections = (config.about_sections ?? [])
+  .map((section) => {
+    const collection = getCollectionBySlug(section.collection);
+    if (!collection) {
+      return null;
+    }
+    return {
+      ...section,
+      collection,
+      projects: resolveCollectionProjects(collection),
+    };
+  })
+  .filter((section): section is NonNullable<typeof section> => section !== null);
 ---
 
 <Layout title="About">
@@ -67,22 +79,23 @@ const teachingCollections = getCollections().filter((c) => c.type === 'teaching'
       </div>
     </section>
 
-    {teachingCollections.map((collection) => {
-      const teachingProjects = resolveCollectionProjects(collection);
+    {aboutSections.map((section) => {
       return (
         <section class="border-t border-slate-200 pt-16">
-          <h2 class="text-2xl font-bold text-slate-900 mb-5">{collection.display_name}</h2>
-          {(collection.summary || collection.description_short) && (
+          <h2 class="text-2xl font-bold text-slate-900 mb-5">
+            {section.title ?? section.collection.display_name}
+          </h2>
+          {(section.summary || section.collection.summary || section.collection.description_short) && (
             <p class="text-slate-600 leading-relaxed mb-8 max-w-2xl">
-              {collection.summary ?? collection.description_short}
+              {section.summary ?? section.collection.summary ?? section.collection.description_short}
             </p>
           )}
 
-          {collection.topics && collection.topics.length > 0 && (
+          {section.collection.topics && section.collection.topics.length > 0 && (
             <div class="mb-8">
               <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Topics</h3>
               <div class="flex flex-wrap gap-2">
-                {collection.topics.map((topic) => (
+                {section.collection.topics.map((topic) => (
                   <span class="text-sm bg-white border border-slate-200 text-slate-700 px-4 py-1.5 rounded-full">
                     {topic}
                   </span>
@@ -91,11 +104,11 @@ const teachingCollections = getCollections().filter((c) => c.type === 'teaching'
             </div>
           )}
 
-          {collection.platforms && collection.platforms.length > 0 && (
+          {section.collection.platforms && section.collection.platforms.length > 0 && (
             <div>
               <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Platforms</h3>
               <div class="flex flex-wrap gap-2">
-                {collection.platforms.map((platform) => (
+                {section.collection.platforms.map((platform) => (
                   <span class="text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-1.5 rounded-full">
                     {platform}
                   </span>
@@ -104,11 +117,11 @@ const teachingCollections = getCollections().filter((c) => c.type === 'teaching'
             </div>
           )}
 
-          {teachingProjects.length > 0 && (
+          {section.projects.length > 0 && (
             <div class="mt-10">
               <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Related Projects</h3>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {teachingProjects.map((p) => (
+                {section.projects.map((p) => (
                   <a
                     href={`/projects/${p.name}`}
                     class="group border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all"

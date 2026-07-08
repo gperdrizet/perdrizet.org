@@ -30,13 +30,12 @@ export interface SiteConfig {
     short: string;
     long?: string;
   };
-  teaching: {
-    active: boolean;
-    summary: string;
-    platforms: string[];
-    topics: string[];
-  };
   home_sections?: Array<{
+    collection: string;
+    title?: string;
+    summary?: string;
+  }>;
+  about_sections?: Array<{
     collection: string;
     title?: string;
     summary?: string;
