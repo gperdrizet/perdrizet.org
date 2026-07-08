@@ -20,7 +20,6 @@ import sys
 from pathlib import Path
 
 import requests
-import yaml as pyyaml
 from openai import OpenAI
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import LiteralScalarString
@@ -30,9 +29,18 @@ from ruamel.yaml.scalarstring import LiteralScalarString
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CONTENT_ROOT = os.environ.get("CONTENT_ROOT", "data/user").strip("/")
-CONFIG_PATH = REPO_ROOT / CONTENT_ROOT / "config.yaml"
-PROJECTS_PATH = REPO_ROOT / CONTENT_ROOT / "projects.yaml"
+
+# Check if the user has data
+if Path(REPO_ROOT / "data" / "user" / "config.yaml").exists() and \
+   Path(REPO_ROOT / "data" / "user" / "projects.yaml").exists():
+    CONTENT_ROOT = REPO_ROOT / "data" / "user"
+
+else:
+    # fallback for placeholder site data
+    CONTENT_ROOT = REPO_ROOT / "data"
+
+CONFIG_PATH = CONTENT_ROOT / "config.yaml"
+PROJECTS_PATH = CONTENT_ROOT / "projects.yaml"
 
 # ---------------------------------------------------------------------------
 # Load .env from repo root (if present) without requiring python-dotenv
@@ -63,8 +71,9 @@ _load_dotenv(REPO_ROOT / ".env")
 def load_config() -> dict:
     if not CONFIG_PATH.exists():
         raise FileNotFoundError(f"Missing required config file: {CONFIG_PATH}")
+    safe_yaml = YAML(typ="safe")
     with open(CONFIG_PATH) as f:
-        return pyyaml.safe_load(f)
+        return safe_yaml.load(f)
 
 
 # ---------------------------------------------------------------------------
