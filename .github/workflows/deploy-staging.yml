@@ -40,8 +40,23 @@ jobs:
           rsync -avz --delete -e "ssh -p ${{ secrets.GATEKEEPER_PORT }}" site/dist/ \
             ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }}:/opt/perdrizet.org-staging/
 
+      - name: Deploy admin agent code
+        run: |
+          rsync -avz --delete --exclude='.venv' --exclude='__pycache__' --exclude='.env' \
+            -e "ssh -p ${{ secrets.GATEKEEPER_PORT }}" \
+            tools/admin/ \
+            ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }}:/opt/perdrizet.org-admin/
+
+      - name: Install admin dependencies
+        run: |
+          ssh -p ${{ secrets.GATEKEEPER_PORT }} \
+            ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
+            "python3 -m venv /opt/perdrizet.org-admin/.venv && \
+             /opt/perdrizet.org-admin/.venv/bin/pip install -q -r /opt/perdrizet.org-admin/requirements.txt"
+
       - name: Health check
         run: |
           ssh -p ${{ secrets.GATEKEEPER_PORT }} \
             ${{ secrets.GATEKEEPER_USER }}@${{ secrets.GATEKEEPER_HOST }} \
-            "curl -sf http://100.64.0.1:8008/ -o /dev/null && echo 'Staging OK'"
+            "curl -sf http://100.64.0.1:8008/ -o /dev/null && echo 'Staging OK' && \
+             curl -sf http://127.0.0.1:8600/health -o /dev/null && echo 'Admin OK'"

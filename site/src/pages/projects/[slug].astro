@@ -1,21 +1,33 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getProjects } from '../../lib/projects';
-import type { Project } from '../../lib/projects';
+import { getCollections, getProjects, resolveCollectionProjects, resolveCollectionRepos } from '../../lib/projects';
+import type { Collection, Project } from '../../lib/projects';
 
 export function getStaticPaths() {
   const projects = getProjects();
-  return projects.map((project) => ({
-    params: { slug: project.name },
-    props: { project },
-  }));
+  const collections = getCollections();
+  return [
+    ...projects.map((project) => ({
+      params: { slug: project.name },
+      props: { entry: project },
+    })),
+    ...collections.map((collection) => ({
+      params: { slug: collection.name },
+      props: { entry: collection },
+    })),
+  ];
 }
 
 interface Props {
-  project: Project;
+  entry: Project | Collection;
 }
 
-const { project } = Astro.props;
+const { entry } = Astro.props;
+const isCollection = entry.kind === 'collection';
+const project = !isCollection ? (entry as Project) : null;
+const collection = isCollection ? (entry as Collection) : null;
+const collectionProjects = collection ? resolveCollectionProjects(collection) : [];
+const collectionRepos = collection ? resolveCollectionRepos(collection) : [];
 
 const statusColors: Record<string, string> = {
   live: 'bg-green-100 text-green-700',
@@ -31,10 +43,12 @@ const statusLabels: Record<string, string> = {
   archived: 'Archived',
 };
 
-const description = project.description_long?.trim() || project.description_short;
+const description = isCollection
+  ? (collection?.description_long?.trim() || collection?.summary || collection?.description_short || '')
+  : (project?.description_long?.trim() || project?.description_short || '');
 ---
 
-<Layout title={project.display_name} description={project.description_short}>
+<Layout title={entry.display_name} description={description}>
   <!-- Page header -->
   <section class="bg-slate-900 text-white py-16">
     <div class="max-w-5xl mx-auto px-6">
@@ -42,47 +56,50 @@ const description = project.description_long?.trim() || project.description_shor
         ← All projects
       </a>
       <div class="flex flex-wrap items-center gap-3 mb-4">
-        <h1 class="text-4xl font-bold">{project.display_name}</h1>
-        <span class:list={[
-          'text-sm font-medium px-3 py-1 rounded-full',
-          statusColors[project.status] ?? 'bg-slate-100 text-slate-600',
-        ]}>
-          {statusLabels[project.status] ?? project.status}
-        </span>
-      </div>
-      <!-- External links -->
-      <div class="flex flex-wrap gap-3 mt-6">
-        {project.github && (
-          <a
-            href={project.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center gap-2 text-sm border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            GitHub →
-          </a>
-        )}
-        {project.service_url && (
-          <a
-            href={project.service_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center gap-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Live Service →
-          </a>
-        )}
-        {project.package_url && (
-          <a
-            href={project.package_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center gap-2 text-sm border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Package →
-          </a>
+        <h1 class="text-4xl font-bold">{entry.display_name}</h1>
+        {!isCollection && project && (
+          <span class:list={[
+            'text-sm font-medium px-3 py-1 rounded-full',
+            statusColors[project.status] ?? 'bg-slate-100 text-slate-600',
+          ]}>
+            {statusLabels[project.status] ?? project.status}
+          </span>
         )}
       </div>
+      {!isCollection && project && (
+        <div class="flex flex-wrap gap-3 mt-6">
+          {project.github && (
+            <a
+              href={project.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center gap-2 text-sm border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              GitHub →
+            </a>
+          )}
+          {project.service_url && (
+            <a
+              href={project.service_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center gap-2 text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Live Service →
+            </a>
+          )}
+          {project.package_url && (
+            <a
+              href={project.package_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center gap-2 text-sm border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Package →
+            </a>
+          )}
+        </div>
+      )}
     </div>
   </section>
 
@@ -90,17 +107,14 @@ const description = project.description_long?.trim() || project.description_shor
   <section class="max-w-5xl mx-auto px-6 py-16">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
 
-      <!-- Main column -->
       <div class="lg:col-span-2 space-y-10">
 
-        <!-- Description -->
         <div>
           <h2 class="text-lg font-semibold text-slate-900 mb-4">About</h2>
           <p class="text-slate-600 leading-relaxed">{description}</p>
         </div>
 
-        <!-- Highlights -->
-        {project.highlights && project.highlights.length > 0 && (
+        {!isCollection && project && project.highlights && project.highlights.length > 0 && (
           <div>
             <h2 class="text-lg font-semibold text-slate-900 mb-4">Key Highlights</h2>
             <ul class="space-y-3">
@@ -114,25 +128,53 @@ const description = project.description_long?.trim() || project.description_shor
           </div>
         )}
 
-        <!-- Teaching context -->
-        {project.teaching_context && (
+        {!isCollection && project && project.teaching_context && (
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-6">
             <h2 class="text-lg font-semibold text-slate-900 mb-3">Teaching Context</h2>
             <p class="text-slate-600 leading-relaxed">{project.teaching_context}</p>
           </div>
         )}
 
+        {isCollection && collection && (collectionProjects.length > 0 || collectionRepos.length > 0) && (
+          <div>
+            <h2 class="text-lg font-semibold text-slate-900 mb-4">Members</h2>
+            <div class="space-y-3">
+              {collectionProjects.map((memberProject) => (
+                <a
+                  href={`/projects/${memberProject.name}`}
+                  class="block border border-slate-200 rounded-lg p-4 hover:border-indigo-300 transition-all"
+                >
+                  <h3 class="font-semibold text-slate-900 mb-1">{memberProject.display_name}</h3>
+                  <p class="text-sm text-slate-600">{memberProject.description_short}</p>
+                </a>
+              ))}
+              {collectionRepos.map((memberRepo) => {
+                const href = memberRepo.url ?? `https://github.com/${memberRepo.repo}`;
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="block border border-slate-200 rounded-lg p-4 hover:border-indigo-300 transition-all"
+                  >
+                    <h3 class="font-semibold text-slate-900 mb-1">{memberRepo.label ?? memberRepo.repo}</h3>
+                    <p class="text-sm text-slate-600">Repository member</p>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
 
-      <!-- Sidebar -->
       <div class="space-y-8">
 
-        <!-- Tags -->
-        {project.tags.length > 0 && (
+        {(isCollection ? (collection?.tags ?? []).length > 0 : project && project.tags.length > 0) && (
           <div>
             <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Technologies</h3>
             <div class="flex flex-wrap gap-2">
-              {project.tags.map((tag) => (
+              {(isCollection ? collection?.tags ?? [] : project?.tags ?? []).map((tag) => (
                 <span class="text-sm bg-slate-100 text-slate-700 px-3 py-1 rounded-full">
                   {tag}
                 </span>
@@ -141,12 +183,11 @@ const description = project.description_long?.trim() || project.description_shor
           </div>
         )}
 
-        <!-- Roles -->
-        {project.roles.length > 0 && (
+        {(isCollection ? (collection?.roles ?? []).length > 0 : project && project.roles.length > 0) && (
           <div>
             <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Roles</h3>
             <div class="flex flex-wrap gap-2">
-              {project.roles.map((role) => (
+              {(isCollection ? collection?.roles ?? [] : project?.roles ?? []).map((role) => (
                 <span class="text-sm border border-indigo-200 text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">
                   {role}
                 </span>

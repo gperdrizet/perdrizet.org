@@ -20,7 +20,7 @@ help:
 	@echo "    make build            Build static site to site/dist/"
 	@echo ""
 	@echo "  Data"
-	@echo "    make sync-projects    Fetch GitHub repos → data/projects.yaml"
+	@echo "    make sync-projects    Fetch GitHub repos → data/user/projects.yaml"
 	@echo ""
 	@echo "  Resume"
 	@echo "    make tailor-resume    Tailor resume to a job posting"
@@ -46,7 +46,7 @@ build:
 # ---- Data sync ---------------------------------------------
 
 sync-projects:
-	@echo "Syncing GitHub repos to data/projects.yaml..."
+	@echo "Syncing GitHub repos to active projects file..."
 	@cd tools/github-agent && \
 		[ -d .venv ] || python3 -m venv .venv && \
 		.venv/bin/pip install -q -r requirements.txt && \

@@ -1,8 +1,9 @@
+# Copy this file to data/user/config.yaml in your fork and customize values.
 personal:
-  name: Ada Placeholder
-  tagline: Builder • Tinkerer • Coffee Optimizer
-  domain: example.com
-  email: hello@example.com
+  name: Your Name
+  tagline: Builder • Engineer • Educator
+  domain: yourdomain.com
+  email: you@yourdomain.com
   github_username: your-github-username
   social:
     linkedin: https://www.linkedin.com/in/your-profile/
@@ -13,11 +14,8 @@ personal:
 
 bio:
   short: >
-    I build practical software, ship small experiments quickly, and write about what
-    I learn.
-  long: >
-    This is demo content for the platform repository. Replace with your own profile
-    in data/user/config.yaml in your fork.
+    One or two sentences that appear on the home page and About page.
+  long: ''
 
 teaching:
   active: false
@@ -25,8 +23,7 @@ teaching:
   platforms: []
   topics: []
 
-home_sections:
-  - collection: teaching-education
+home_sections: []
 
 llm:
   base_url: http://localhost:8080/v1

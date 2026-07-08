@@ -17,7 +17,7 @@ bio:
     I learn.
   long: >
     This is demo content for the platform repository. Replace with your own profile
-    in data/user/config.yaml in your fork.
+    in your fork.
 
 teaching:
   active: false

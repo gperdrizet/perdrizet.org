@@ -1,30 +1,33 @@
 # Personal Brand Platform
 
-A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fork it, point it at your data, and deploy. No hardcoded names, no third-party services.
+A generalizable, self-hosted personal brand platform for AI/ML practitioners. Fork it, point it at your data, and deploy.
 
 [![Test](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/test.yml)
 [![Deploy Staging](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-staging.yml)
 [![Deploy Production](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/gperdrizet/perdrizet.org/actions/workflows/deploy-prod.yml)
 
-## What it is
+![Astro](https://img.shields.io/badge/Astro-5-BC52EE?logo=astro&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)
+![nginx](https://img.shields.io/badge/nginx-009639?logo=nginx&logoColor=white)
 
-**Tech stack:** [Astro 5](https://astro.build) · Tailwind CSS 4 · TypeScript · GitHub Actions · nginx
-
-The site is a static Astro build deployed over rsync to a VPS. All personal data — name, bio, social links, project list, resume — lives in two YAML files. The rest of the codebase is generic. Forking means editing those files, not hunting for hardcoded strings.
+The site is a static Astro build deployed over rsync to a VPS. Platform/demo data lives in `data/*.yaml`; fork-owned personal data lives in `data/user/*.yaml`.
 
 **Included:**
-- Home page with hero, featured projects, and teaching callout
-- Projects hub with per-project detail pages (driven by `data/projects.yaml`)
-- About page with bio and teaching section
+- Home page with hero and featured projects
+- Projects hub with per-project detail pages (driven by `data/user/projects.yaml`)
+- About page with bio and interests
 - Contact page
+- Agent for making edits and updates to live page contents
 - CI/CD: auto-deploy to staging on push, manual deploy to production with version tag
 
 **Planned:**
-- GitHub agent — syncs new repos into `data/projects.yaml` via GitHub API + LLM descriptions
-- Resume tailoring — gap-analysis against a job posting, rewrites bullets, exports PDF
-- Social post generator — turns project highlights into LinkedIn/Bluesky drafts
-
----
+- GitHub agent: syncs new repos into `data/user/projects.yaml` via GitHub API + LLM descriptions
+- Resume tailoring: gap-analysis against a job posting, rewrites bullets, exports PDF
+- Social post generator: turns project highlights into LinkedIn/Bluesky drafts
 
 ## Setup
 
@@ -35,7 +38,7 @@ git clone https://github.com/YOUR_USERNAME/YOUR_FORK.git
 cd YOUR_FORK
 ```
 
-### 2. Edit `data/config.yaml`
+### 2. Edit `data/user/config.yaml`
 
 This is the only file you need to change for a basic deployment. Everything flows from here.
 
@@ -53,7 +56,7 @@ personal:
 bio:
   short: >
     One or two sentences that appear on the home page and About page.
-  long: ""   # Optional — leave blank to reuse `short`
+  long: ""   # Optional; leave blank to reuse `short`
 
 teaching:
   active: false   # Set true to show teaching section on Home + About
@@ -70,13 +73,13 @@ deploy:
   prod_path: /opt/yoursite
 ```
 
-### 3. Edit `data/projects.yaml`
+### 3. Edit `data/user/projects.yaml`
 
 Add your projects. Each entry becomes a card on the Projects page and a dedicated `/projects/<name>` page.
 
 ```yaml
 projects:
-  - name: my-project            # slug — must be URL-safe
+  - name: my-project            # slug, must be URL-safe
     display_name: My Project
     status: live                # live | published | wip | archived
     featured: true              # pins to home page
@@ -108,11 +111,9 @@ npm run dev
 # → http://localhost:4321
 ```
 
----
-
 ## Deployment
 
-The CI/CD pipeline mirrors the pattern used across this VPS infrastructure: rsync static files to a pre-configured nginx directory on the server.
+The CI/CD pipeline is designed for deployment to a public VPS: rsync static files to a pre-configured nginx directory on the server.
 
 ### Prerequisites on the server
 
@@ -122,7 +123,7 @@ sudo mkdir -p /opt/yoursite /opt/yoursite-staging
 sudo chown youruser:youruser /opt/yoursite /opt/yoursite-staging
 ```
 
-Add nginx configs to serve both directories — see `configs/nginx/` for reference configs.
+Add nginx configs to serve both directories; see `configs/nginx/` for reference configs.
 
 ### GitHub Actions secrets
 
@@ -143,7 +144,7 @@ The deploy user's public key must be in `~/.ssh/authorized_keys` on the server.
 |----------|---------|--------|
 | **Test** | Pull request to `main` | Runs `npm ci && npm run build` |
 | **Deploy Staging** | Push to `main` or manual dispatch | `staging_path` in config |
-| **Deploy Production** | Manual dispatch — requires version tag + typing `deploy` to confirm | `prod_path` in config |
+| **Deploy Production** | Manual dispatch, requires version tag + typing `deploy` to confirm | `prod_path` in config |
 
 ### Manual deploy
 
@@ -163,4 +164,12 @@ Set `LLM_API_KEY` in your environment for the resume and social tools:
 export LLM_API_KEY=your-key-here
 ```
 
-Any OpenAI-compatible endpoint works — llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/config.yaml` under `llm:`.
+Any OpenAI-compatible endpoint works: llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/user/config.yaml` under `llm:`.
+
+## Upstream Sync Safety
+
+Your fork should only store personal data in `data/user/*.yaml`.
+
+- Upstream platform updates should touch code and demo files, not your `data/user/*.yaml` files.
+- Merging upstream into your fork updates platform code without replacing your portfolio content.
+- `data/user/config.yaml` and `data/user/projects.yaml` are required runtime files.

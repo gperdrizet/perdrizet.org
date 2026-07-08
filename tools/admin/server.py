@@ -1,5 +1,5 @@
 """
-Site Admin Agent — FastAPI server
+Site Admin Agent: FastAPI server
 LLM-mediated content editing via GitHub API, protected by HTTP Basic auth.
 
 Start (dev):  uvicorn server:app --host 127.0.0.1 --port 8600 --reload
@@ -21,6 +21,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from editor import (
+    CONTENT_CONFIG_PATH, CONTENT_PROJECTS_PATH,
     _SHAConflict, apply_edit, create_pr, get_context, get_open_pr,
     merge_pr, read_file, trigger_workflow, write_file,
 )
@@ -57,7 +58,7 @@ ADMIN_USER     = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 GITHUB_TOKEN   = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO    = os.environ.get("GITHUB_REPO", "")   # owner/repo  e.g. gperdrizet/perdrizet.org
-GITHUB_BRANCH  = os.environ.get("GITHUB_BRANCH", "main")
+GITHUB_BRANCH  = os.environ.get("GITHUB_BRANCH", "dev")
 LLM_API_KEY    = os.environ.get("LLM_API_KEY", "")
 LLM_BASE_URL   = os.environ.get("LLM_BASE_URL", "http://localhost:8080/v1")
 LLM_MODEL      = os.environ.get("LLM_MODEL", "llama-3.1-8b")
@@ -93,24 +94,34 @@ Help the site owner update content via natural language commands.
 
 ## What you can edit
 
-data/config.yaml — allowed dotted paths:
+<<<CONFIG_PATH>>>, allowed dotted paths:
   personal.tagline, personal.email,
   personal.social.github, personal.social.linkedin,
   personal.social.twitter, personal.social.bluesky,
-  bio.short, bio.long, teaching.active, teaching.summary
+    bio.short, bio.long, teaching.active, teaching.summary,
+    home_sections
 
-data/projects.yaml — per-project operations:
+<<<PROJECTS_PATH>>>, per-project operations:
   update fields: description_short, description_long, teaching_context (free text)
   set featured: true or false
   set status: active | wip | archived | published
   add a highlight bullet point
   replace the tags list
 
-## Hard limits — never do these
+<<<PROJECTS_PATH>>>, per-collection operations (kind: collection):
+    update fields: summary, description_short, description_long, type,
+                                 topics (list), platforms (list)
+    set featured: true or false
+    replace tags list
+    replace roles list
+    replace members list (member objects with project or repo)
+
+## Hard limits: never do these
 - No edits outside data/ (no source code, no .astro files, no workflows, no nginx)
 - No deleting projects
 - No adding new projects (make sync-projects handles that)
 - No changing project names or github URLs
+- No changing collection slugs (name)
 
 ## Output format
 ALWAYS respond with a single valid JSON object. No markdown fences, no preamble.
@@ -118,7 +129,7 @@ ALWAYS respond with a single valid JSON object. No markdown fences, no preamble.
 For a content edit:
 {
   "reply": "human-readable description of the change being made",
-  "file": "data/config.yaml" | "data/projects.yaml",
+    "file": "<<<CONFIG_PATH>>>" | "<<<PROJECTS_PATH>>>",
   "operation": "<operation name>",
   "args": { ... }
 }
@@ -130,12 +141,17 @@ Operations and their args:
   set_project_status    -> {"project": "project-slug", "status": "active"}
   add_project_highlight -> {"project": "project-slug", "highlight": "Reduced latency by 40%"}
   update_project_tags   -> {"project": "project-slug", "tags": ["python", "docker"]}
+    update_collection_field   -> {"collection": "collection-slug", "field": "summary", "value": "..."}
+    set_collection_featured   -> {"collection": "collection-slug", "value": true}
+    update_collection_tags    -> {"collection": "collection-slug", "tags": ["teaching", "python"]}
+    update_collection_roles   -> {"collection": "collection-slug", "roles": ["educator"]}
+    update_collection_members -> {"collection": "collection-slug", "members": [{"project": "bug-hunter"}, {"repo": "owner/repo", "label": "Repo label"}]}
 
 For a question about current content (no change needed):
 {"reply": "...", "operation": "none"}
 
 For anything out of scope:
-{"reply": "I can only help with site content — project descriptions, bio, config fields, and tags.", "operation": "none"}
+{"reply": "I can only help with site content: project and collection content, bio, config fields, tags, roles, and collection members.", "operation": "none"}
 
 ## Current site state
 <<<CONTEXT>>>
@@ -143,7 +159,16 @@ For anything out of scope:
 
 
 def build_system_prompt(context: str) -> str:
-    return _SYSTEM_PROMPT_TEMPLATE.replace("<<<CONTEXT>>>", context)
+    prompt = _SYSTEM_PROMPT_TEMPLATE.replace("<<<CONTEXT>>>", context)
+    prompt = prompt.replace("<<<CONFIG_PATH>>>", CONTENT_CONFIG_PATH)
+    prompt = prompt.replace("<<<PROJECTS_PATH>>>", CONTENT_PROJECTS_PATH)
+    return prompt
+
+
+def _operation_file(operation: str) -> str:
+    if operation == "update_config_field":
+        return CONTENT_CONFIG_PATH
+    return CONTENT_PROJECTS_PATH
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +207,7 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
     }.items() if not v]
     if missing:
         return JSONResponse({
-            "reply": f"Server misconfigured — set these env vars: {', '.join(missing)}",
+            "reply": f"Server misconfigured; set these env vars: {', '.join(missing)}",
             "operation": "none",
             "committed": False,
         })
@@ -191,7 +216,7 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
 
     # Fetch live context from GitHub for every turn (keeps it fresh)
     try:
-        context = get_context(GITHUB_TOKEN, GITHUB_REPO)
+        context = get_context(GITHUB_TOKEN, GITHUB_REPO, branch=GITHUB_BRANCH)
     except Exception as exc:
         context = f"(could not fetch site state: {exc})"
 
@@ -218,7 +243,7 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
 
     if operation and operation != "none":
         try:
-            file_path = intent["file"]
+            file_path = _operation_file(operation)
             for attempt in range(3):
                 content, sha = read_file(file_path, GITHUB_TOKEN, GITHUB_REPO, branch=GITHUB_BRANCH)
                 updated, summary = apply_edit(content, intent)
@@ -230,7 +255,6 @@ async def chat(req: ChatRequest, _user: str = Depends(require_auth)) -> JSONResp
                     if attempt == 2:
                         raise RuntimeError(f"SHA conflict after 3 attempts: {e}")
             committed = True
-            reply += f"\n\nCommitted to `{GITHUB_BRANCH}`. Staging will rebuild automatically."
         except Exception as exc:
             reply += f"\n\n⚠️ Edit failed: {exc}"
 

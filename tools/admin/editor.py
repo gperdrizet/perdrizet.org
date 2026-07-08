@@ -1,11 +1,12 @@
 """
 Constrained edit operations for the site admin agent.
 
-ONLY data/config.yaml and data/projects.yaml can be read or written.
-Every operation is validated in Python — the LLM never bypasses these checks.
+Only content YAML files are editable.
+Every operation is validated in Python; the LLM never bypasses these checks.
 """
 
 import base64
+import os
 from typing import Any
 
 import requests
@@ -13,8 +14,15 @@ import yaml
 
 GITHUB_API = "https://api.github.com"
 
-# Hard allow-list: the only files this tool may touch
-ALLOWED_PATHS = frozenset({"data/config.yaml", "data/projects.yaml"})
+CONTENT_ROOT = os.environ.get("CONTENT_ROOT", "data/user").strip("/")
+CONTENT_CONFIG_PATH = f"{CONTENT_ROOT}/config.yaml"
+CONTENT_PROJECTS_PATH = f"{CONTENT_ROOT}/projects.yaml"
+
+# Hard allow-list: content files only
+ALLOWED_PATHS = frozenset({
+    CONTENT_CONFIG_PATH,
+    CONTENT_PROJECTS_PATH,
+})
 
 # Dotted config.yaml paths the LLM may update
 ALLOWED_CONFIG_PATHS = frozenset({
@@ -28,6 +36,7 @@ ALLOWED_CONFIG_PATHS = frozenset({
     "bio.long",
     "teaching.active",
     "teaching.summary",
+    "home_sections",
 })
 
 # Free-text project fields the LLM may overwrite
@@ -35,6 +44,15 @@ ALLOWED_PROJECT_FIELDS = frozenset({
     "description_short",
     "description_long",
     "teaching_context",
+})
+
+ALLOWED_COLLECTION_FIELDS = frozenset({
+    "summary",
+    "description_short",
+    "description_long",
+    "type",
+    "topics",
+    "platforms",
 })
 
 ALLOWED_STATUSES = frozenset({"active", "wip", "archived", "published"})
@@ -145,19 +163,20 @@ def trigger_workflow(token: str, repo: str, workflow_file: str,
     resp.raise_for_status()
 
 
-def get_context(token: str, repo: str) -> str:
+def get_context(token: str, repo: str, branch: str = "main") -> str:
     """Return a concise summary of current site content for the LLM system prompt."""
     lines: list[str] = []
+    config_path, projects_path = CONTENT_CONFIG_PATH, CONTENT_PROJECTS_PATH
 
     try:
-        raw, _ = read_file("data/config.yaml", token, repo, branch="main")
+        raw, _ = read_file(config_path, token, repo, branch=branch)
         cfg = yaml.safe_load(raw)
         p = cfg.get("personal", {})
         b = cfg.get("bio", {})
         t = cfg.get("teaching", {})
         soc = p.get("social", {})
         lines += [
-            "### config.yaml",
+            f"### {config_path}",
             f"personal.name:           {p.get('name', '')}",
             f"personal.tagline:        {p.get('tagline', '')}",
             f"personal.email:          {p.get('email', '')}",
@@ -168,19 +187,21 @@ def get_context(token: str, repo: str) -> str:
             f"teaching.summary:        {str(t.get('summary', ''))[:200]}",
         ]
     except Exception as exc:
-        lines.append(f"(config.yaml unavailable: {exc})")
+        lines.append(f"({config_path} unavailable: {exc})")
 
     try:
-        raw, _ = read_file("data/projects.yaml", token, repo, branch="main")
+        raw, _ = read_file(projects_path, token, repo, branch=branch)
         projects = yaml.safe_load(raw).get("projects", [])
-        lines.append("\n### projects.yaml  (name | status | featured | tags)")
+        lines.append(f"\n### {projects_path}  (kind | name | status/type | featured | tags)")
         for proj in projects:
+            kind = proj.get("kind", "project")
+            status_or_type = proj.get("status", "") if kind == "project" else proj.get("type", "")
             lines.append(
-                f"  {proj['name']:<36} | {proj.get('status',''):<10} | "
+                f"  {kind:<10} | {proj['name']:<28} | {status_or_type:<10} | "
                 f"featured:{proj.get('featured', False)} | {proj.get('tags', [])}"
             )
     except Exception as exc:
-        lines.append(f"(projects.yaml unavailable: {exc})")
+        lines.append(f"({projects_path} unavailable: {exc})")
 
     return "\n".join(lines)
 
@@ -242,6 +263,72 @@ def apply_edit(file_content: str, intent: dict) -> tuple[str, str]:
         proj["tags"] = tags
         summary = f"{args['project']}.tags = {tags}"
 
+    elif op == "update_collection_field":
+        field = args.get("field", "")
+        if field not in ALLOWED_COLLECTION_FIELDS:
+            raise ValueError(f"Collection field not allowed: {field!r}")
+        coll = _find_collection(data, args["collection"])
+        if field in {"topics", "platforms"}:
+            value = args.get("value", [])
+            if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+                raise ValueError(f"{field} must be a list of strings")
+            coll[field] = value
+        else:
+            coll[field] = args["value"]
+        summary = f"{args['collection']}.{field} updated"
+
+    elif op == "set_collection_featured":
+        coll = _find_collection(data, args["collection"])
+        coll["featured"] = bool(args["value"])
+        summary = f"{args['collection']}.featured = {bool(args['value'])}"
+
+    elif op == "update_collection_tags":
+        tags = args.get("tags", [])
+        if not isinstance(tags, list) or not all(isinstance(t, str) for t in tags):
+            raise ValueError("tags must be a list of strings")
+        coll = _find_collection(data, args["collection"])
+        coll["tags"] = tags
+        summary = f"{args['collection']}.tags = {tags}"
+
+    elif op == "update_collection_roles":
+        roles = args.get("roles", [])
+        if not isinstance(roles, list) or not all(isinstance(r, str) for r in roles):
+            raise ValueError("roles must be a list of strings")
+        coll = _find_collection(data, args["collection"])
+        coll["roles"] = roles
+        summary = f"{args['collection']}.roles = {roles}"
+
+    elif op == "update_collection_members":
+        members = args.get("members", [])
+        if not isinstance(members, list):
+            raise ValueError("members must be a list")
+        normalized: list[dict[str, str]] = []
+        for member in members:
+            if not isinstance(member, dict):
+                raise ValueError("each member must be an object")
+            if "project" in member:
+                if not isinstance(member["project"], str):
+                    raise ValueError("member.project must be a string")
+                normalized.append({"project": member["project"]})
+            elif "repo" in member:
+                if not isinstance(member["repo"], str):
+                    raise ValueError("member.repo must be a string")
+                repo_member = {"repo": member["repo"]}
+                if "label" in member:
+                    if not isinstance(member["label"], str):
+                        raise ValueError("member.label must be a string")
+                    repo_member["label"] = member["label"]
+                if "url" in member:
+                    if not isinstance(member["url"], str):
+                        raise ValueError("member.url must be a string")
+                    repo_member["url"] = member["url"]
+                normalized.append(repo_member)
+            else:
+                raise ValueError("member must include either project or repo")
+        coll = _find_collection(data, args["collection"])
+        coll["members"] = normalized
+        summary = f"{args['collection']}.members updated"
+
     else:
         raise ValueError(f"Unknown operation: {op!r}")
 
@@ -260,6 +347,13 @@ def _set_nested(d: dict, keys: list[str], value: Any) -> None:
 
 def _find_project(data: dict, name: str) -> dict:
     for p in data.get("projects", []):
-        if p.get("name") == name:
+        if p.get("name") == name and p.get("kind", "project") != "collection":
             return p
     raise ValueError(f"Project not found: {name!r}")
+
+
+def _find_collection(data: dict, name: str) -> dict:
+    for p in data.get("projects", []):
+        if p.get("name") == name and p.get("kind") == "collection":
+            return p
+    raise ValueError(f"Collection not found: {name!r}")

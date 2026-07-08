@@ -1,14 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getConfig } from '../lib/config';
-import { getProjectsByRole } from '../lib/projects';
+import { getCollections, resolveCollectionProjects } from '../lib/projects';
 
 const config = getConfig();
-const { personal, bio, teaching } = config;
+const { personal, bio } = config;
 
 const bioText = bio.long?.trim() ? bio.long : bio.short;
-
-const educatorProjects = getProjectsByRole('educator');
+const teachingCollections = getCollections().filter((c) => c.type === 'teaching');
 ---
 
 <Layout title="About">
@@ -68,56 +67,64 @@ const educatorProjects = getProjectsByRole('educator');
       </div>
     </section>
 
-    <!-- Teaching -->
-    {teaching.active && (
-      <section class="border-t border-slate-200 pt-16">
-        <h2 class="text-2xl font-bold text-slate-900 mb-5">Teaching & Education</h2>
-        <p class="text-slate-600 leading-relaxed mb-8 max-w-2xl">{teaching.summary}</p>
+    {teachingCollections.map((collection) => {
+      const teachingProjects = resolveCollectionProjects(collection);
+      return (
+        <section class="border-t border-slate-200 pt-16">
+          <h2 class="text-2xl font-bold text-slate-900 mb-5">{collection.display_name}</h2>
+          {(collection.summary || collection.description_short) && (
+            <p class="text-slate-600 leading-relaxed mb-8 max-w-2xl">
+              {collection.summary ?? collection.description_short}
+            </p>
+          )}
 
-        <div class="mb-8">
-          <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Topics Taught</h3>
-          <div class="flex flex-wrap gap-2">
-            {teaching.topics.map((topic) => (
-              <span class="text-sm bg-white border border-slate-200 text-slate-700 px-4 py-1.5 rounded-full">
-                {topic}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {teaching.platforms && teaching.platforms.length > 0 && (
-          <div>
-            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Platforms</h3>
-            <div class="flex flex-wrap gap-2">
-              {teaching.platforms.map((platform) => (
-                <span class="text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-1.5 rounded-full">
-                  {platform}
-                </span>
-              ))}
+          {collection.topics && collection.topics.length > 0 && (
+            <div class="mb-8">
+              <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Topics</h3>
+              <div class="flex flex-wrap gap-2">
+                {collection.topics.map((topic) => (
+                  <span class="text-sm bg-white border border-slate-200 text-slate-700 px-4 py-1.5 rounded-full">
+                    {topic}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {educatorProjects.length > 0 && (
-          <div class="mt-10">
-            <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Education Projects</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {educatorProjects.map((p) => (
-                <a
-                  href={`/projects/${p.name}`}
-                  class="group border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all"
-                >
-                  <h4 class="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors mb-1">
-                    {p.display_name}
-                  </h4>
-                  <p class="text-sm text-slate-600 leading-relaxed">{p.description_short}</p>
-                </a>
-              ))}
+          {collection.platforms && collection.platforms.length > 0 && (
+            <div>
+              <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Platforms</h3>
+              <div class="flex flex-wrap gap-2">
+                {collection.platforms.map((platform) => (
+                  <span class="text-sm bg-indigo-50 border border-indigo-200 text-indigo-700 px-4 py-1.5 rounded-full">
+                    {platform}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </section>
-    )}
+          )}
+
+          {teachingProjects.length > 0 && (
+            <div class="mt-10">
+              <h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">Related Projects</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {teachingProjects.map((p) => (
+                  <a
+                    href={`/projects/${p.name}`}
+                    class="group border border-slate-200 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all"
+                  >
+                    <h4 class="font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors mb-1">
+                      {p.display_name}
+                    </h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">{p.description_short}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      );
+    })}
 
   </div>
 </Layout>
