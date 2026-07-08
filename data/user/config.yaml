@@ -16,20 +16,8 @@ bio:
     I build practical software, ship small experiments quickly, and write about what
     I learn.
   long: >
-    This is demo content for the platform repository. Replace with your own profile.
+    This is demo content for the platform repository. Replace with your own profile
+    in data/user/config.yaml in your fork.
 
 home_sections: []
 about_sections: []
-
-llm:
-  base_url: http://localhost:8080/v1
-  model: llama-3.1-8b
-
-deploy:
-  staging_path: /opt/your-site-staging
-  prod_path: /opt/your-site
-  staging_port: 8510
-
-github_agent:
-  skip: []
-  groups: []
