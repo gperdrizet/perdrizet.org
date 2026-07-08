@@ -1,23 +1,27 @@
-"""GitHub Agent: syncs public GitHub repos into the active projects file.
+"""GitHub Agent: syncs public GitHub repos into user content files.
 
 Rules:
-  - Repos already in projects.yaml are never modified.
-  - New repos are appended with a skeleton entry.
-  - description_short is generated via LLM for new repos if LLM_API_KEY is set.
-  - Forked repos are skipped by default (pass --include-forks to override).
+    - A raw snapshot is written to data/user/projects.raw.yaml on every sync.
+    - Curated projects in data/user/projects.yaml are never overwritten.
+    - Only new repos/groups are appended to curated projects.
+    - description_short is generated via LLM when LLM_API_KEY is set.
+    - Forked repos are skipped by default (pass --include-forks to override).
 
 Usage:
-  python agent.py [--include-forks] [--dry-run]
+    python agent.py [--bootstrap] [--include-forks] [--dry-run]
 
-Configuration is read from the active config file.
+Profile is read from data/user/profile.yaml.
+Runtime settings are read from data/user/runtime.json.
 LLM API key is read from the LLM_API_KEY environment variable.
 Optional GitHub token: GITHUB_TOKEN env var (raises rate limit from 60 to 5000 req/hr).
 """
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import requests
 from dotenv import load_dotenv
@@ -31,17 +35,12 @@ from ruamel.yaml.scalarstring import LiteralScalarString
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Check if the user has data
-if Path(REPO_ROOT / "data" / "user" / "config.yaml").exists() and \
-   Path(REPO_ROOT / "data" / "user" / "projects.yaml").exists():
-    CONTENT_ROOT = REPO_ROOT / "data" / "user"
-
-else:
-    # fallback for placeholder site data
-    CONTENT_ROOT = REPO_ROOT / "data"
-
-CONFIG_PATH = CONTENT_ROOT / "config.yaml"
+CONTENT_ROOT = REPO_ROOT / "data" / "user"
+PROFILE_PATH = CONTENT_ROOT / "profile.yaml"
+LEGACY_PROFILE_PATH = CONTENT_ROOT / "config.yaml"
 PROJECTS_PATH = CONTENT_ROOT / "projects.yaml"
+RAW_PROJECTS_PATH = CONTENT_ROOT / "projects.raw.yaml"
+RUNTIME_PATH = CONTENT_ROOT / "runtime.json"
 
 # ---------------------------------------------------------------------------
 # Load .env from repo root (if present)
@@ -50,15 +49,93 @@ PROJECTS_PATH = CONTENT_ROOT / "projects.yaml"
 load_dotenv(REPO_ROOT / ".env", override=False)
 
 # ---------------------------------------------------------------------------
-# Config loading
+# Profile/runtime loading
 # ---------------------------------------------------------------------------
 
-def load_config() -> dict:
-    if not CONFIG_PATH.exists():
-        raise FileNotFoundError(f"Missing required config file: {CONFIG_PATH}")
+def _build_default_profile() -> dict[str, Any] | None:
+    username = os.environ.get("GITHUB_USERNAME", "").strip()
+    if not username:
+        return None
+
+    display_name = os.environ.get("PERSONAL_NAME", "").strip() or username
+    email = os.environ.get("PERSONAL_EMAIL", "").strip()
+    domain = os.environ.get("PERSONAL_DOMAIN", "").strip()
+
+    return {
+        "personal": {
+            "name": display_name,
+            "tagline": "Builder • Engineer • Educator",
+            "domain": domain,
+            "email": email,
+            "github_username": username,
+            "social": {
+                "linkedin": "",
+                "twitter": "",
+                "bluesky": "",
+                "substack": "",
+                "github": f"https://github.com/{username}",
+            },
+        },
+        "bio": {
+            "short": "",
+            "long": "",
+        },
+        "home_sections": [],
+        "about_sections": [],
+    }
+
+
+def _write_yaml(path: Path, data: dict) -> None:
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    yaml.width = 120
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.dump(data, f)
+
+
+def ensure_user_profile() -> bool:
+    """Create data/user/profile.yaml from env values if it does not exist."""
+    if PROFILE_PATH.exists():
+        return True
+    default_profile = _build_default_profile()
+    if not default_profile:
+        return False
+    _write_yaml(PROFILE_PATH, default_profile)
+    print(f"Bootstrapped {PROFILE_PATH.relative_to(REPO_ROOT)} from environment")
+    return True
+
+
+def load_profile(allow_bootstrap: bool = False) -> dict:
+    if not PROFILE_PATH.exists() and LEGACY_PROFILE_PATH.exists():
+        safe_yaml = YAML(typ="safe")
+        with open(LEGACY_PROFILE_PATH, encoding="utf-8") as f:
+            legacy = safe_yaml.load(f)
+        if isinstance(legacy, dict):
+            _write_yaml(PROFILE_PATH, legacy)
+
+    if not PROFILE_PATH.exists():
+        if not allow_bootstrap or not ensure_user_profile():
+            raise FileNotFoundError(
+                f"Missing required profile file: {PROFILE_PATH}. "
+                "Set GITHUB_USERNAME in .env and pass --bootstrap to initialize user content."
+            )
     safe_yaml = YAML(typ="safe")
-    with open(CONFIG_PATH, encoding="utf-8") as f:
-        return safe_yaml.load(f)
+    with open(PROFILE_PATH, encoding="utf-8") as f:
+        data = safe_yaml.load(f)
+    return data or {}
+
+
+def load_runtime() -> dict[str, Any]:
+    if not RUNTIME_PATH.exists():
+        return {}
+    try:
+        data = json.loads(RUNTIME_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -68,27 +145,49 @@ def load_config() -> dict:
 GITHUB_API = "https://api.github.com"
 
 
+def _normalize_token(token: str | None) -> str:
+    return (token or "").strip()
+
+
 def fetch_repos(username: str, token: str | None, include_forks: bool) -> list[dict]:
     """Return all public repos for the given GitHub username."""
-    headers = {"Accept": "application/vnd.github+json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
+    token = _normalize_token(token)
 
-    repos = []
-    page = 1
+    def _headers(use_auth: bool) -> dict[str, str]:
+        headers = {"Accept": "application/vnd.github+json"}
+        if use_auth and token:
+            headers["Authorization"] = f"Bearer {token}"
+        return headers
+
+    # If a provided token is invalid/revoked, fall back to public API mode
+    # so bootstrap can still complete for public repositories.
+    use_auth = bool(token)
     while True:
-        resp = requests.get(
-            f"{GITHUB_API}/users/{username}/repos",
-            headers=headers,
-            params={"per_page": 100, "page": page, "type": "public"},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        batch = resp.json()
-        if not batch:
+        repos = []
+        page = 1
+        retry_without_auth = False
+        while True:
+            resp = requests.get(
+                f"{GITHUB_API}/users/{username}/repos",
+                headers=_headers(use_auth),
+                params={"per_page": 100, "page": page, "type": "public"},
+                timeout=30,
+            )
+            if resp.status_code == 401 and use_auth:
+                print("[warn] GitHub token rejected; retrying without token", file=sys.stderr)
+                use_auth = False
+                retry_without_auth = True
+                break
+            resp.raise_for_status()
+            batch = resp.json()
+            if not batch:
+                break
+            repos.extend(batch)
+            page += 1
+        if retry_without_auth:
+            continue
+        if repos or page >= 1:
             break
-        repos.extend(batch)
-        page += 1
 
     if not include_forks:
         repos = [r for r in repos if not r.get("fork")]
@@ -98,6 +197,7 @@ def fetch_repos(username: str, token: str | None, include_forks: bool) -> list[d
 
 def fetch_repo_languages(repo: dict, token: str | None) -> list[str]:
     """Return the top languages for a repo, ordered by bytes."""
+    token = _normalize_token(token)
     headers = {"Accept": "application/vnd.github+json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -112,6 +212,7 @@ def fetch_repo_languages(repo: dict, token: str | None) -> list[str]:
 
 def fetch_repo_topics(repo: dict, token: str | None) -> list[str]:
     """Return GitHub topics for a repo."""
+    token = _normalize_token(token)
     headers = {
         "Accept": "application/vnd.github.mercy-preview+json",
     }
@@ -127,6 +228,47 @@ def fetch_repo_topics(repo: dict, token: str | None) -> list[str]:
         return resp.json().get("names", [])
     except Exception:
         return []
+
+
+def fetch_pinned_repo_names(username: str, token: str | None) -> set[str]:
+    """Return pinned repository names for the user via GitHub GraphQL."""
+    token = _normalize_token(token)
+    if not token:
+        return set()
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+    }
+    query = """
+        query($login: String!) {
+            user(login: $login) {
+                pinnedItems(first: 6, types: REPOSITORY) {
+                    nodes {
+                        ... on Repository {
+                            name
+                        }
+                    }
+                }
+            }
+        }
+        """
+
+    try:
+        resp = requests.post(
+            f"{GITHUB_API}/graphql",
+            headers=headers,
+            json={"query": query, "variables": {"login": username}},
+            timeout=20,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        nodes = (((payload.get("data") or {}).get("user") or {}).get("pinnedItems") or {}).get("nodes") or []
+        names = {n.get("name", "").strip() for n in nodes if isinstance(n, dict)}
+        return {name for name in names if name}
+    except Exception as exc:
+        print(f"[warn] Could not fetch pinned repos: {exc}", file=sys.stderr)
+        return set()
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +301,7 @@ course/series, a shared technology stack, etc. Only suggest a group if 3 or more
 repos clearly belong together. Skip repos that stand alone as unique projects.
 
 Output ONLY a valid YAML snippet in exactly this format, ready to paste into \
-config.yaml under github_agent.groups. Use the `name` field as a slug (lowercase, \
+runtime.json under sync.groups. Use the `name` field as a slug (lowercase, \
 hyphens). Do not output any explanation or markdown fences.
 
 Example format:
@@ -226,20 +368,34 @@ def suggest_groups(client: OpenAI, model: str, repos: list[dict]) -> str:
 # YAML helpers
 # ---------------------------------------------------------------------------
 
-def load_projects_yaml() -> tuple[YAML, dict]:
-    """Load projects.yaml preserving comments. Returns (ryaml instance, data)."""
-    if not PROJECTS_PATH.exists():
-        raise FileNotFoundError(f"Missing required projects file: {PROJECTS_PATH}")
+def load_projects_yaml(path: Path, create_if_missing: bool = False) -> tuple[YAML, dict]:
+    """Load a projects-style YAML file preserving comments."""
     ryaml = YAML()
     ryaml.preserve_quotes = True
     ryaml.width = 120
-    with open(PROJECTS_PATH, encoding="utf-8") as f:
-        data = ryaml.load(f)
+    if not path.exists():
+        if not create_if_missing:
+            raise FileNotFoundError(f"Missing required projects file: {path}")
+        data = {"projects": []}
+    else:
+        with open(path, encoding="utf-8") as f:
+            data = ryaml.load(f)
+        if data is None:
+            data = {"projects": []}
     return ryaml, data
 
 
 def existing_slugs(data: dict) -> set[str]:
-    return {p["name"] for p in data.get("projects", [])}
+    projects = data.get("projects")
+    if not isinstance(projects, list):
+        return set()
+    slugs: set[str] = set()
+    for project in projects:
+        if isinstance(project, dict):
+            name = project.get("name")
+            if isinstance(name, str) and name.strip():
+                slugs.add(name)
+    return slugs
 
 
 def make_entry(repo: dict, languages: list[str], topics: list[str], description: str) -> dict:
@@ -300,16 +456,39 @@ def make_group_entry(group: dict, owner: str) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Sync GitHub repos to the active projects file")
+    parser.add_argument(
+        "--bootstrap",
+        action="store_true",
+        help="Create data/user/profile.yaml from env if missing (requires GITHUB_USERNAME)",
+    )
     parser.add_argument("--include-forks", action="store_true", help="Include forked repos")
     parser.add_argument("--dry-run", action="store_true", help="Print changes without writing")
     parser.add_argument("--min-stars", type=int, default=0, help="Skip repos with fewer than N stars")
     parser.add_argument("--suggest-groups", action="store_true",
                         help="Ask the LLM to suggest group consolidations and print YAML to stdout")
+    parser.add_argument(
+        "--seed-from-pins",
+        action="store_true",
+        help="When bootstraping a fresh curated projects file, seed from GitHub profile pins only",
+    )
     args = parser.parse_args()
 
-    config = load_config()
-    username: str = config["personal"]["github_username"]
-    llm_cfg = config.get("llm", {})
+    profile = load_profile(allow_bootstrap=args.bootstrap)
+    runtime = load_runtime()
+
+    username: str = ((runtime.get("github") or {}).get("username") or "").strip()
+    if not username:
+        username = ((profile.get("personal") or {}).get("github_username") or "").strip()
+    if not username:
+        username = os.environ.get("GITHUB_USERNAME", "").strip()
+    if not username:
+        print(
+            "[error] Missing GitHub username. Set github.username in "
+            f"{RUNTIME_PATH.relative_to(REPO_ROOT)} or GITHUB_USERNAME in .env.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    llm_cfg = runtime.get("llm") if isinstance(runtime.get("llm"), dict) else {}
 
     token = os.environ.get("GITHUB_TOKEN")
     api_key = os.environ.get("LLM_API_KEY")
@@ -325,8 +504,9 @@ def main() -> None:
     else:
         print("LLM_API_KEY not set; descriptions will use GitHub description as fallback.")
 
-    skip_list: list[str] = config.get("github_agent", {}).get("skip", [])
-    groups: list[dict] = config.get("github_agent", {}).get("groups", [])
+    sync_cfg = runtime.get("sync") if isinstance(runtime.get("sync"), dict) else {}
+    skip_list: list[str] = sync_cfg.get("skip", []) if isinstance(sync_cfg.get("skip", []), list) else []
+    groups: list[dict] = sync_cfg.get("groups", []) if isinstance(sync_cfg.get("groups", []), list) else []
     # Build a flat set of all repo names that belong to any group
     grouped_repos: set[str] = {r for g in groups for r in g.get("repos", [])}
 
@@ -350,7 +530,7 @@ def main() -> None:
             repo["_topics"] = fetch_repo_topics(repo, token)
         print("  Asking LLM for group suggestions...\n")
         yaml_snippet = suggest_groups(llm_client, llm_cfg.get("model", ""), candidate_repos)
-        print(f"# ---- Suggested groups (paste into {CONFIG_PATH.relative_to(REPO_ROOT)} under github_agent.groups) ----")
+        print(f"# ---- Suggested groups (paste into {RUNTIME_PATH.relative_to(REPO_ROOT)} under sync.groups) ----")
         print(yaml_snippet)
         return
 
@@ -365,59 +545,100 @@ def main() -> None:
         repos = [r for r in repos if (r.get("stargazers_count") or 0) >= args.min_stars]
         print(f"  {len(repos)} with >= {args.min_stars} star(s)")
 
-    ryaml, data = load_projects_yaml()
+    ryaml, data = load_projects_yaml(PROJECTS_PATH, create_if_missing=True)
     known = existing_slugs(data)
 
-    new_repos = [r for r in repos if r["name"] not in known]
-    new_groups = [g for g in groups if g["name"] not in known]
-    print(f"  {len(known)} already in projects.yaml, {len(new_repos)} new repo(s), {len(new_groups)} new group(s)")
-
-    if not new_repos and not new_groups:
-        print("Nothing to add.")
-        return
-
-    added = []
-
-    # --- Consolidated group entries ---
-    for group in new_groups:
-        print(f"\n  [group] {group['name']}")
-        entry = make_group_entry(group, username)
-        if args.dry_run:
-            print(f"    [dry-run] would add consolidated entry: {entry['display_name']}")
-            print(f"    repos: {', '.join(group.get('repos', []))}")
+    pinned_names: set[str] | None = None
+    seed_mode = args.seed_from_pins and len(known) == 0
+    if seed_mode:
+        pinned_names = fetch_pinned_repo_names(username, token)
+        if pinned_names:
+            print(f"  Seeding curated projects from {len(pinned_names)} pinned repo(s)")
         else:
-            append_entry(data, entry)
-            added.append(group["name"])
+            print(
+                "[error] No pinned repos found (or token invalid/missing). "
+                "Bootstrap requires pinned repos for initial curated seed.",
+                file=sys.stderr,
+            )
+            sys.exit(2)
 
-    # --- Individual repo entries ---
-    for repo in new_repos:
-        print(f"\n  + {repo['name']}")
+    raw_entries = []
+    for repo in repos:
         languages = fetch_repo_languages(repo, token)
         topics = fetch_repo_topics(repo, token)
 
-        if llm_client:
-            print("    generating description...")
+        use_llm = bool(llm_client)
+        if seed_mode and pinned_names is not None and repo["name"] not in pinned_names:
+            use_llm = False
+
+        if use_llm:
             description = generate_description(llm_client, llm_cfg.get("model", ""), repo, languages, topics)
         else:
             description = repo.get("description") or ""
 
         entry = make_entry(repo, languages, topics, description)
+        raw_entries.append(entry)
+
+    raw_data = {"projects": raw_entries}
+    if args.dry_run:
+        print(
+            f"\n[dry-run] would write raw snapshot with {len(raw_entries)} repo(s) "
+            f"to {RAW_PROJECTS_PATH.relative_to(REPO_ROOT)}"
+        )
+    else:
+        _write_yaml(RAW_PROJECTS_PATH, raw_data)
+        print(f"Wrote raw snapshot: {RAW_PROJECTS_PATH.relative_to(REPO_ROOT)} ({len(raw_entries)} repo(s))")
+
+    new_repo_entries = [entry for entry in raw_entries if entry["name"] not in known]
+    if seed_mode and pinned_names is not None:
+        new_repo_entries = [entry for entry in new_repo_entries if entry["name"] in pinned_names]
+        for entry in new_repo_entries:
+            entry["featured"] = True
+
+    new_groups = [g for g in groups if g["name"] not in known]
+    print(
+        f"  {len(known)} already curated, {len(new_repo_entries)} new repo(s), "
+        f"{len(new_groups)} new group(s)"
+    )
+
+    if not new_repo_entries and not new_groups:
+        print("No curated additions needed.")
+        return
+
+    added: list[str] = []
+
+    for group in new_groups:
+        print(f"\n  [group] {group['name']}")
+        entry = make_group_entry(group, username)
 
         if args.dry_run:
-            print(f"    [dry-run] would add: {entry['display_name']}")
-            print(f"    description: {description[:80]}...")
+            print(f"    [dry-run] would add group: {entry['display_name']}")
+            print(f"    repos: {', '.join(group.get('repos', []))}")
         else:
             append_entry(data, entry)
-            added.append(repo["name"])
+            added.append(group["name"])
+
+    for entry in new_repo_entries:
+        print(f"\n  + {entry['name']}")
+        if args.dry_run:
+            print(f"    [dry-run] would add: {entry['display_name']}")
+            short_desc = str(entry.get("description_short") or "")
+            print(f"    description: {short_desc[:80]}...")
+        else:
+            append_entry(data, entry)
+            added.append(entry["name"])
 
     if not args.dry_run and added:
         with open(PROJECTS_PATH, "w", encoding="utf-8") as f:
             ryaml.dump(data, f)
-        print(f"\nWrote {len(added)} new entry(s) to {PROJECTS_PATH.relative_to(REPO_ROOT)}")
+        print(f"\nWrote {len(added)} new curated entry(s) to {PROJECTS_PATH.relative_to(REPO_ROOT)}")
         print("Review and fill in: roles, featured, highlights, teaching_context")
     elif args.dry_run:
-        total = len(new_repos) + len(new_groups)
-        print(f"\n[dry-run] would have added {total} entry(s) ({len(new_groups)} consolidated group(s), {len(new_repos)} individual repo(s))")
+        total = len(new_repo_entries) + len(new_groups)
+        print(
+            f"\n[dry-run] would have added {total} entry(s) "
+            f"({len(new_groups)} consolidated group(s), {len(new_repo_entries)} individual repo(s))"
+        )
 
 
 if __name__ == "__main__":

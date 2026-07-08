@@ -4,3 +4,4 @@ openai>=1.30
 requests>=2.32
 pyyaml>=6.0
 python-multipart>=0.0.12
+cryptography>=43.0

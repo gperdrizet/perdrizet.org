@@ -1,0 +1,23 @@
+---
+import { getAdminOnboardingUrl, getConfig } from '../lib/config';
+
+const config = getConfig();
+const adminOnboardingUrl = getAdminOnboardingUrl(config);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Redirecting to Admin</title>
+  </head>
+  <body>
+    <p>Redirecting to admin onboarding...</p>
+    <script is:inline>
+      const adminOnboarding = new URL({JSON.stringify(adminOnboardingUrl)});
+      adminOnboarding.searchParams.set('return_to', window.location.origin + '/');
+      window.location.replace(adminOnboarding.toString());
+    </script>
+  </body>
+</html>

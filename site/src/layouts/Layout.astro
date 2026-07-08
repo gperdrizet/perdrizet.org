@@ -1,16 +1,20 @@
 ---
 import '../styles/global.css';
-import { getConfig } from '../lib/config';
+import { getAdminOnboardingUrl, getAdminUrl, getConfig, isOnboardingRequired } from '../lib/config';
 
 interface Props {
   title?: string;
   description?: string;
+  disableOnboardingRedirect?: boolean;
 }
 
 const config = getConfig();
 const { personal, bio } = config;
+const onboardingRequired = isOnboardingRequired();
+const adminOnboardingUrl = getAdminOnboardingUrl(config);
+const adminUrl = getAdminUrl(config);
 
-const { title, description = bio.short } = Astro.props;
+const { title, description = bio.short, disableOnboardingRedirect = false } = Astro.props;
 const pageTitle = title
   ? `${title} | ${personal.name}`
   : `${personal.name} | ${personal.tagline}`;
@@ -20,6 +24,7 @@ const nav = [
   { href: '/projects', label: 'Projects' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
+  { href: adminUrl, label: 'Admin', external: true },
 ];
 
 const currentPath = Astro.url.pathname;
@@ -54,6 +59,8 @@ const currentPath = Astro.url.pathname;
                     ? 'text-indigo-400'
                     : 'text-slate-300',
                 ]}
+                target={href.startsWith('http') ? '_blank' : undefined}
+                rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
               >
                 {label}
               </a>
@@ -81,6 +88,14 @@ const currentPath = Astro.url.pathname;
         </div>
       </div>
     </footer>
+
+    {onboardingRequired && !disableOnboardingRedirect && (
+      <script is:inline>
+        const adminOnboarding = new URL({JSON.stringify(adminOnboardingUrl)});
+        adminOnboarding.searchParams.set('return_to', window.location.href);
+        window.location.replace(adminOnboarding.toString());
+      </script>
+    )}
 
   </body>
 </html>

@@ -5,7 +5,7 @@ import { getCollectionBySlug, getFeaturedProjects, resolveCollectionProjects } f
 
 const config = getConfig();
 const { personal, bio } = config;
-const featured = getFeaturedProjects();
+const featured = getFeaturedProjects().slice(0, 6);
 const homeSections = (config.home_sections ?? [])
   .map((section) => {
     const collection = getCollectionBySlug(section.collection);

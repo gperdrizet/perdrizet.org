@@ -75,7 +75,8 @@ let _entries: ContentEntry[] | null = null;
 function getEntries(): ContentEntry[] {
   if (!_entries) {
     if (!fs.existsSync(USER_PROJECTS_PATH)) {
-      throw new Error('Missing required file: data/user/projects.yaml');
+      _entries = [];
+      return _entries;
     }
     const raw = fs.readFileSync(USER_PROJECTS_PATH, 'utf-8');
     const data = yaml.load(raw) as ProjectsFile;

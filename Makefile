@@ -4,7 +4,7 @@
 # ============================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup dev build sync-projects tailor-resume deploy-staging deploy-prod
+.PHONY: help dev build admin deploy-staging deploy-prod
 
 # ---- Helpers -----------------------------------------------
 
@@ -12,28 +12,17 @@ help:
 	@echo ""
 	@echo "  DotProfile"
 	@echo ""
-	@echo "  Setup"
-	@echo "    make setup            Interactive first-time setup wizard"
-	@echo ""
 	@echo "  Site development"
 	@echo "    make dev              Start Astro dev server"
 	@echo "    make build            Build static site to site/dist/"
 	@echo ""
-	@echo "  Data"
-	@echo "    make sync-projects    Fetch GitHub repos → data/user/projects.yaml"
-	@echo ""
-	@echo "  Resume"
-	@echo "    make tailor-resume    Tailor resume to a job posting"
+	@echo "  Admin"
+	@echo "    make admin            Start admin UI/API (includes GitHub sync tooling)"
 	@echo ""
 	@echo "  Deploy (direct to VPS)"
 	@echo "    make deploy-staging   rsync dist/ to staging on gatekeeper"
 	@echo "    make deploy-prod      rsync dist/ to production on gatekeeper"
 	@echo ""
-
-# ---- Setup -------------------------------------------------
-
-setup:
-	@python3 scripts/setup.py
 
 # ---- Site --------------------------------------------------
 
@@ -43,22 +32,6 @@ dev:
 build:
 	cd site && npm run build
 
-# ---- Data sync ---------------------------------------------
-
-sync-projects:
-	@echo "Syncing GitHub repos to active projects file..."
-	@cd tools/github-agent && \
-		[ -d .venv ] || python3 -m venv .venv && \
-		.venv/bin/pip install -q -r requirements.txt && \
-		.venv/bin/python agent.py $(ARGS)
-
-suggest-groups:
-	@echo "Asking LLM to suggest group consolidations..."
-	@cd tools/github-agent && \
-		[ -d .venv ] || python3 -m venv .venv && \
-		.venv/bin/pip install -q -r requirements.txt && \
-		.venv/bin/python agent.py --suggest-groups
-
 # ---- Admin agent -------------------------------------------
 
 admin:
@@ -67,16 +40,6 @@ admin:
 		[ -d .venv ] || python3 -m venv .venv && \
 		.venv/bin/pip install -q -r requirements.txt && \
 		.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8600 --reload
-
-# ---- Resume ------------------------------------------------
-
-tailor-resume:
-	@echo "Starting resume tailoring..."
-	@cd tools/resume && \
-		[ -d .venv ] || python3 -m venv .venv && \
-		.venv/bin/pip install -q -r requirements.txt && \
-		.venv/bin/python tailor.py
-
 # ---- Deploy (manual) ---------------------------------------
 
 deploy-staging: build

@@ -9,7 +9,7 @@ A self-hosted personal profile platform for builders. Run it locally, edit your 
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-009639?logo=nginx&logoColor=white)
 
-The site is a static Astro build deployed over rsync to a VPS. Platform/demo data lives in `data/*.yaml`; runtime content lives in `data/user/*.yaml`.
+The site is a static Astro build deployed over rsync to a VPS. Platform/demo data lives in `data/*.yaml`; user-managed content and runtime state live in `data/user/`.
 
 **Included:**
 - Home page with hero and featured projects
@@ -33,40 +33,80 @@ git clone https://github.com/gperdrizet/dotprofile.git
 cd dotprofile
 ```
 
-### 2. Edit `data/user/config.yaml`
+### 2. Configure environment
 
-This is the only file you need to change for a basic deployment. Everything flows from here.
+Copy the template and set your admin key.
 
-```yaml
-personal:
-  name: Your Name
-  tagline: "Your · Role · Tags"
-  domain: yourdomain.com
-  email: you@yourdomain.com
-  github_username: your-github-username
-  social:
-    linkedin: https://www.linkedin.com/in/yourprofile/
-    github: https://github.com/your-github-username
-
-bio:
-  short: >
-    One or two sentences that appear on the home page and About page.
-  long: ""   # Optional; leave blank to reuse `short`
-
-home_sections: []
-about_sections: []
+```bash
+cp .env.template .env
 ```
 
-### 3. Edit `data/user/projects.yaml`
+Required on first boot:
 
-Add your projects. Each entry becomes a card on the Projects page and a dedicated `/projects/<name>` page.
+```bash
+ADMIN_PASSWORD=your-strong-admin-key
+```
+
+Optional in `.env` (can be set later in onboarding/settings UI):
+- `GITHUB_USERNAME`
+- `GITHUB_TOKEN`
+- `LLM_BASE_URL`
+- `LLM_MODEL`
+- `LLM_API_KEY`
+
+### 3. Install dependencies
+
+Requires Node 22+. Install with [fnm](https://github.com/Schniz/fnm) or nvm.
+
+```bash
+cd site
+npm install
+```
+
+### 4. Start admin and complete onboarding
+
+Run admin first:
+
+```bash
+make admin
+# -> http://127.0.0.1:8600
+```
+
+On first run, complete the onboarding form in the admin UI. Onboarding writes these files under `data/user/`:
+- `profile.yaml` (public profile content)
+- `projects.yaml` (curated projects and collections)
+- `projects.raw.yaml` (raw sync library)
+- `runtime.json` (non-secret runtime settings)
+- `secrets.enc.json` (encrypted secrets)
+
+`config.yaml` is legacy and is no longer the primary runtime configuration file.
+
+### 5. Run site locally
+
+```bash
+cd site
+npm run dev
+# → http://localhost:4321
+```
+
+The site redirects first-time visitors to `/setup` until onboarding is complete.
+
+### 6. Edit content after onboarding
+
+Use the admin UI to update profile text, project descriptions, tags, collection sections, and runtime/secrets settings.
+
+If you prefer manual edits, use these content files:
+- `data/user/profile.yaml`
+- `data/user/projects.yaml`
+
+Example `data/user/projects.yaml` entry:
 
 ```yaml
 projects:
-  - name: my-project            # slug, must be URL-safe
+  - name: my-project
     display_name: My Project
-    status: live                # live | published | wip | archived
-    featured: true              # pins to home page
+    status: published
+    featured: true
     tags: [python, llm]
     roles: [llm-engineer]
     github: https://github.com/you/my-project
@@ -78,7 +118,7 @@ projects:
       - Resume bullet point two
 ```
 
-Collection sections on Home/About are fully configurable in `data/user/config.yaml` by listing collection slugs:
+Collection sections are configured in `data/user/profile.yaml`:
 
 ```yaml
 home_sections:
@@ -90,24 +130,7 @@ about_sections:
     title: Open Source
 ```
 
-### 4. Install dependencies
-
-Requires Node 22+. Install with [fnm](https://github.com/Schniz/fnm) or nvm.
-
-```bash
-cd site
-npm install
-```
-
-### 5. Run locally
-
-```bash
-cd site
-npm run dev
-# → http://localhost:4321
-```
-
-### 6. Run admin locally (optional)
+### 7. Run admin locally (optional)
 
 ```bash
 make admin
@@ -155,13 +178,13 @@ make deploy-prod
 
 ### LLM tools (optional)
 
-Set `LLM_API_KEY` in your environment for the resume and social tools:
+Set `LLM_API_KEY` in your environment for the resume and social tools if your model endpoint requires auth:
 
 ```bash
 export LLM_API_KEY=your-key-here
 ```
 
-Any OpenAI-compatible endpoint works: llama.cpp, Ollama, OpenAI, etc. Configure the URL and model in `data/user/config.yaml` under `llm:`.
+Any OpenAI-compatible endpoint works: llama.cpp, Ollama, OpenAI, etc. Configure URL/model in admin settings (stored in `data/user/runtime.json`), and keep API keys in encrypted secrets (`data/user/secrets.enc.json`).
 
 ## Scope
 

@@ -15,19 +15,22 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 CONTENT_ROOT = os.environ.get("CONTENT_ROOT", "data/user").strip("/")
-CONTENT_CONFIG_PATH = f"{CONTENT_ROOT}/config.yaml"
+CONTENT_PROFILE_PATH = f"{CONTENT_ROOT}/profile.yaml"
 CONTENT_PROJECTS_PATH = f"{CONTENT_ROOT}/projects.yaml"
 
 # Hard allow-list: content files only
 ALLOWED_PATHS = frozenset({
-    CONTENT_CONFIG_PATH,
+    CONTENT_PROFILE_PATH,
     CONTENT_PROJECTS_PATH,
 })
 
-# Dotted config.yaml paths the LLM may update
+# Dotted profile.yaml paths the LLM may update
 ALLOWED_CONFIG_PATHS = frozenset({
+    "personal.name",
     "personal.tagline",
+    "personal.domain",
     "personal.email",
+    "personal.github_username",
     "personal.social.github",
     "personal.social.linkedin",
     "personal.social.twitter",
@@ -102,16 +105,16 @@ class _SHAConflict(Exception):
 def get_context(token: str = "", repo: str = "", branch: str = "main") -> str:
     """Return a concise summary of current site content for the LLM system prompt."""
     lines: list[str] = []
-    config_path, projects_path = CONTENT_CONFIG_PATH, CONTENT_PROJECTS_PATH
+    profile_path, projects_path = CONTENT_PROFILE_PATH, CONTENT_PROJECTS_PATH
 
     try:
-        raw, _ = read_file(config_path, token, repo, branch=branch)
+        raw, _ = read_file(profile_path, token, repo, branch=branch)
         cfg = yaml.safe_load(raw)
         p = cfg.get("personal", {})
         b = cfg.get("bio", {})
         soc = p.get("social", {})
         lines += [
-            f"### {config_path}",
+            f"### {profile_path}",
             f"personal.name:           {p.get('name', '')}",
             f"personal.tagline:        {p.get('tagline', '')}",
             f"personal.email:          {p.get('email', '')}",
@@ -122,7 +125,7 @@ def get_context(token: str = "", repo: str = "", branch: str = "main") -> str:
             f"about_sections:          {cfg.get('about_sections', [])}",
         ]
     except Exception as exc:
-        lines.append(f"({config_path} unavailable: {exc})")
+        lines.append(f"({profile_path} unavailable: {exc})")
 
     try:
         raw, _ = read_file(projects_path, token, repo, branch=branch)

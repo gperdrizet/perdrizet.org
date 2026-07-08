@@ -9,6 +9,9 @@ site/.astro/
 # Environment
 .env
 .vscode
+data/user/
+data/user/secrets.enc.json
+data/user/runtime.json
 
 # Python
 __pycache__/

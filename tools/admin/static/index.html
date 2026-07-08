@@ -6,16 +6,14 @@
   <title>Site Admin</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: #0f172a;
       color: #e2e8f0;
-      height: 100dvh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
     }
-
     header {
       padding: 0.875rem 1.25rem;
       background: #1e293b;
@@ -23,25 +21,122 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-shrink: 0;
+      gap: 1rem;
     }
     header h1 { font-size: 0.95rem; font-weight: 600; color: #f1f5f9; letter-spacing: 0.01em; }
     header span { font-size: 0.75rem; color: #64748b; margin-left: 0.5rem; }
-
     .header-actions { display: flex; gap: 0.5rem; align-items: center; }
 
-    .btn-ghost {
-      background: none;
+    .btn {
       border: 1px solid #334155;
-      color: #94a3b8;
-      padding: 0.3rem 0.75rem;
-      border-radius: 0.375rem;
+      background: #0f172a;
+      color: #cbd5e1;
+      border-radius: 0.5rem;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.8rem;
       cursor: pointer;
-      font-size: 0.78rem;
-      transition: border-color 0.15s, color 0.15s;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
-    .btn-ghost:hover { border-color: #64748b; color: #e2e8f0; }
-    .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { border-color: #64748b; color: #fff; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary {
+      border-color: #1d4ed8;
+      background: #1d4ed8;
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: #2563eb; border-color: #2563eb; }
+
+    #statusBar {
+      display: none;
+      padding: 0.6rem 1.25rem;
+      border-bottom: 1px solid #334155;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      background: #172132;
+    }
+
+    .hidden { display: none !important; }
+
+    #onboarding {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 2rem 1rem;
+      overflow-y: auto;
+    }
+
+    .card {
+      width: min(860px, 100%);
+      background: #172132;
+      border: 1px solid #334155;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 10px 32px rgba(0,0,0,0.25);
+    }
+
+    .section-card {
+      margin-top: 1rem;
+      background: #111c2c;
+      border: 1px solid #334155;
+      border-radius: 0.85rem;
+      padding: 0.95rem;
+    }
+    .section-card h3 {
+      font-size: 0.9rem;
+      color: #e2e8f0;
+      margin-bottom: 0.25rem;
+    }
+
+    .card h2 { font-size: 1.05rem; margin-bottom: 0.3rem; color: #f8fafc; }
+    .muted { color: #94a3b8; font-size: 0.88rem; }
+
+    .grid {
+      margin-top: 1rem;
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    label { display: block; font-size: 0.78rem; color: #93c5fd; margin-bottom: 0.32rem; }
+    input, textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      border-radius: 0.5rem;
+      padding: 0.55rem 0.65rem;
+      font-size: 0.86rem;
+    }
+    textarea { min-height: 4.8rem; resize: vertical; }
+    input:focus, textarea:focus { outline: none; border-color: #3b82f6; }
+
+    .onboarding-actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    #workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #settingsPanel {
+      display: none;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid #334155;
+      background: #111c2c;
+    }
+    .settings-grid {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
 
     #messages {
       flex: 1;
@@ -50,8 +145,8 @@
       display: flex;
       flex-direction: column;
       gap: 0.875rem;
+      min-height: 0;
     }
-
     .msg {
       max-width: 78%;
       padding: 0.7rem 1rem;
@@ -76,13 +171,11 @@
     .msg.system-note {
       align-self: center;
       background: transparent;
-      color: #475569;
+      color: #64748b;
       font-size: 0.78rem;
-      font-style: italic;
       max-width: 100%;
       text-align: center;
     }
-    /* Green left border when a commit was made */
     .msg.committed { border-left: 3px solid #22c55e; padding-left: 0.825rem; }
 
     footer {
@@ -94,8 +187,7 @@
       align-items: flex-end;
       flex-shrink: 0;
     }
-
-    textarea {
+    #input {
       flex: 1;
       background: #0f172a;
       border: 1px solid #334155;
@@ -111,26 +203,7 @@
       overflow-y: auto;
       transition: border-color 0.15s;
     }
-    textarea:focus { outline: none; border-color: #3b82f6; }
-    textarea::placeholder { color: #475569; }
 
-    .send-btn {
-      background: #1d4ed8;
-      color: #fff;
-      border: none;
-      border-radius: 0.5rem;
-      padding: 0.625rem 1.1rem;
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 500;
-      white-space: nowrap;
-      transition: background 0.15s;
-      flex-shrink: 0;
-    }
-    .send-btn:hover:not(:disabled) { background: #2563eb; }
-    .send-btn:disabled { background: #1e293b; color: #475569; cursor: not-allowed; }
-
-    /* Spinner */
     .spinner {
       display: inline-block;
       width: 0.875rem;
@@ -142,35 +215,233 @@
       vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    #bootstrapOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.78);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      padding: 1rem;
+    }
+    .overlay-card {
+      width: min(520px, 100%);
+      border: 1px solid #334155;
+      background: #111c2c;
+      border-radius: 0.9rem;
+      padding: 1rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+    .overlay-row {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      color: #e2e8f0;
+      font-size: 0.92rem;
+      margin-bottom: 0.6rem;
+    }
+    #bootstrapProgress {
+      list-style: none;
+      display: grid;
+      gap: 0.35rem;
+      color: #93c5fd;
+      font-size: 0.82rem;
+    }
   </style>
 </head>
 <body>
 
 <header>
   <div>
-    <h1>Site Admin<span>content editor</span></h1>
+    <h1>Site Admin<span>onboarding + content editor</span></h1>
   </div>
   <div class="header-actions">
-    <button class="btn-ghost" id="clearBtn">Clear history</button>
+    <button class="btn" id="settingsBtn">Settings</button>
+    <button class="btn" id="syncBtn">Sync GitHub</button>
+    <button class="btn" id="clearBtn">Clear history</button>
   </div>
 </header>
 
-<div id="messages">
-  <div class="msg system-note">Describe the change you want, e.g. "Set bug-hunter as featured" or "Update my tagline to..."</div>
+<div id="statusBar"></div>
+
+<div id="bootstrapOverlay" class="hidden">
+  <div class="overlay-card">
+    <div class="overlay-row">
+      <span class="spinner"></span>
+      <span>Bootstrapping your site...</span>
+    </div>
+    <ul id="bootstrapProgress"></ul>
+  </div>
 </div>
 
-<footer>
-  <textarea id="input" placeholder="e.g. Update the description for nixx. Set llm-detector as featured." rows="1"></textarea>
-  <button class="send-btn" id="sendBtn">Send</button>
-</footer>
+<section id="onboarding" class="hidden">
+  <div class="card">
+    <h2>Welcome. Let us bootstrap your site.</h2>
+    <p class="muted">Start with required profile fields, then optional profile fields, then required secrets and API credentials.</p>
+
+    <form id="onboardingForm">
+      <div class="section-card">
+        <h3>Required Personal Details</h3>
+        <p class="muted">These fields are required for first bootstrap.</p>
+        <div class="grid">
+          <div>
+            <label for="ob_name">Name</label>
+            <input id="ob_name" required />
+          </div>
+          <div>
+            <label for="ob_github_username">GitHub Username</label>
+            <input id="ob_github_username" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h3>Optional Personal Details</h3>
+        <p class="muted">These can be completed now or updated later in settings/content edits.</p>
+        <div class="grid">
+          <div>
+            <label for="ob_tagline">Tagline</label>
+            <input id="ob_tagline" />
+          </div>
+          <div>
+            <label for="ob_github_url">GitHub URL</label>
+            <input id="ob_github_url" placeholder="https://github.com/you" />
+          </div>
+          <div>
+            <label for="ob_linkedin">LinkedIn URL</label>
+            <input id="ob_linkedin" />
+          </div>
+          <div>
+            <label for="ob_email">Email</label>
+            <input id="ob_email" type="email" />
+          </div>
+          <div>
+            <label for="ob_domain">Domain</label>
+            <input id="ob_domain" placeholder="example.com" />
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label for="ob_bio_short">Short Bio</label>
+            <textarea id="ob_bio_short"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <h3>Secrets and API Credentials</h3>
+        <p class="muted">Required for now. Stored encrypted at rest with your admin key.</p>
+        <div class="grid">
+          <div>
+            <label for="ob_llm_base_url">LLM Base URL</label>
+            <input id="ob_llm_base_url" value="http://localhost:8080/v1" required />
+          </div>
+          <div>
+            <label for="ob_llm_model">LLM Model</label>
+            <input id="ob_llm_model" value="llama-3.1-8b" required />
+          </div>
+          <div>
+            <label for="ob_llm_api_key">LLM API Key</label>
+            <input id="ob_llm_api_key" type="password" required />
+          </div>
+          <div>
+            <label for="ob_github_token">GitHub Token</label>
+            <input id="ob_github_token" type="password" required />
+          </div>
+        </div>
+      </div>
+
+      <div class="onboarding-actions">
+        <button type="submit" class="btn btn-primary" id="bootstrapBtn">Bootstrap Site</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section id="workspace" class="hidden">
+  <div id="settingsPanel">
+    <div class="settings-grid">
+      <div>
+        <label for="set_github_username">GitHub Username</label>
+        <input id="set_github_username" />
+      </div>
+      <div>
+        <label for="set_llm_base_url">LLM Base URL</label>
+        <input id="set_llm_base_url" />
+      </div>
+      <div>
+        <label for="set_llm_model">LLM Model</label>
+        <input id="set_llm_model" />
+      </div>
+      <div>
+        <label for="set_llm_api_key">LLM API Key (leave blank to keep)</label>
+        <input id="set_llm_api_key" type="password" />
+      </div>
+      <div>
+        <label for="set_github_token">GitHub Token (leave blank to keep)</label>
+        <input id="set_github_token" type="password" />
+      </div>
+      <div style="display:flex; align-items:flex-end;">
+        <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+      </div>
+    </div>
+    <p class="muted" id="maskedSecretsNote" style="margin-top:0.5rem;"></p>
+  </div>
+
+  <div id="messages">
+    <div class="msg system-note">Describe a content change, or use Sync GitHub to refresh your project pool.</div>
+  </div>
+
+  <footer>
+    <textarea id="input" placeholder="Update a project description, set featured, edit tags..." rows="1"></textarea>
+    <button class="btn btn-primary" id="sendBtn">Send</button>
+  </footer>
+</section>
 
 <script>
-  const msgsEl    = document.getElementById('messages');
-  const inputEl   = document.getElementById('input');
-  const sendBtn   = document.getElementById('sendBtn');
-  const clearBtn  = document.getElementById('clearBtn');
+  const statusBar = document.getElementById('statusBar');
+  const onboardingEl = document.getElementById('onboarding');
+  const workspaceEl = document.getElementById('workspace');
 
-  // ── Chat ──────────────────────────────────────────────────────────────────
+  const onboardingForm = document.getElementById('onboardingForm');
+  const bootstrapBtn = document.getElementById('bootstrapBtn');
+  const bootstrapOverlay = document.getElementById('bootstrapOverlay');
+  const bootstrapProgress = document.getElementById('bootstrapProgress');
+
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  const maskedSecretsNote = document.getElementById('maskedSecretsNote');
+
+  const msgsEl = document.getElementById('messages');
+  const inputEl = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const syncBtn = document.getElementById('syncBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  const forceOnboarding = new URLSearchParams(window.location.search).get('onboarding') === '1';
+  const ADMIN_KEY_STORAGE_KEY = 'site_admin_key';
+  let adminKey = localStorage.getItem(ADMIN_KEY_STORAGE_KEY) || '';
+
+  function authHeaders(existing = {}) {
+    return adminKey ? { ...existing, 'X-Admin-Key': adminKey } : existing;
+  }
+
+  async function ensureAdminKey() {
+    if (adminKey) return;
+    const entered = window.prompt('Enter admin key:');
+    if (!entered || !entered.trim()) {
+      throw new Error('Admin key is required.');
+    }
+    adminKey = entered.trim();
+    localStorage.setItem(ADMIN_KEY_STORAGE_KEY, adminKey);
+  }
+
+  function showStatus(message, isError = false) {
+    statusBar.style.display = 'block';
+    statusBar.style.color = isError ? '#fecaca' : '#cbd5e1';
+    statusBar.textContent = message;
+  }
 
   function addMsg(text, role, committed = false) {
     const d = document.createElement('div');
@@ -181,14 +452,195 @@
     return d;
   }
 
-  async function send() {
+  function showBootstrapOverlay() {
+    if (!bootstrapOverlay || !bootstrapProgress) {
+      return {
+        setStep: () => {},
+        hide: () => {},
+      };
+    }
+
+    const steps = [
+      'Validate onboarding fields',
+      'Send bootstrap request',
+      'Process GitHub sync (this can take a minute)',
+      'Finalize and return to site',
+    ];
+
+    const nodes = [];
+    bootstrapProgress.innerHTML = '';
+    for (const step of steps) {
+      const item = document.createElement('li');
+      item.textContent = `○ ${step}`;
+      bootstrapProgress.appendChild(item);
+      nodes.push(item);
+    }
+
+    const setStep = (index) => {
+      nodes.forEach((node, i) => {
+        if (i < index) {
+          node.textContent = `✓ ${steps[i]}`;
+          node.style.color = '#86efac';
+        } else if (i === index) {
+          node.textContent = `● ${steps[i]}`;
+          node.style.color = '#93c5fd';
+        } else {
+          node.textContent = `○ ${steps[i]}`;
+          node.style.color = '#64748b';
+        }
+      });
+    };
+
+    setStep(0);
+    bootstrapOverlay.classList.remove('hidden');
+    return {
+      setStep,
+      hide: () => {
+        bootstrapOverlay.classList.add('hidden');
+      },
+    };
+  }
+
+  async function fetchJson(url, options = {}) {
+    await ensureAdminKey();
+    const res = await fetch(url, {
+      ...options,
+      headers: authHeaders(options.headers || {}),
+    });
+    const data = await res.json();
+    if (res.status === 401) {
+      adminKey = '';
+      localStorage.removeItem(ADMIN_KEY_STORAGE_KEY);
+      throw new Error('Invalid admin key. Reload and try again.');
+    }
+    if (!res.ok) {
+      throw new Error(data.message || data.reply || `HTTP ${res.status}`);
+    }
+    return data;
+  }
+
+  function setField(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value || '';
+  }
+
+  async function hydrateSettings() {
+    const runtime = await fetchJson('/settings/runtime');
+    setField('set_github_username', runtime.github?.username || '');
+    setField('set_llm_base_url', runtime.llm?.base_url || '');
+    setField('set_llm_model', runtime.llm?.model || '');
+
+    const secretData = await fetchJson('/settings/secrets');
+    const llmMask = secretData.secrets?.llm_api_key || '(not set)';
+    const ghMask = secretData.secrets?.github_token || '(not set)';
+    maskedSecretsNote.textContent = `Stored secrets: LLM ${llmMask} | GitHub ${ghMask}`;
+  }
+
+  async function loadState() {
+    const state = await fetchJson('/onboarding/state');
+    const needsOnboarding = forceOnboarding || !state.initialized;
+
+    if (needsOnboarding) {
+      onboardingEl.classList.remove('hidden');
+      workspaceEl.classList.add('hidden');
+      showStatus('Onboarding required before content editing is enabled.');
+      return;
+    }
+
+    onboardingEl.classList.add('hidden');
+    workspaceEl.classList.remove('hidden');
+    await hydrateSettings();
+    showStatus('Ready. Edit content, update settings, or sync GitHub.');
+  }
+
+  onboardingForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    bootstrapBtn.disabled = true;
+    const overlay = showBootstrapOverlay();
+    showStatus('Bootstrapping profile, runtime settings, and pinned projects...');
+    try {
+      overlay.setStep(1);
+      const payload = {
+        name: document.getElementById('ob_name').value,
+        github_username: document.getElementById('ob_github_username').value,
+        email: document.getElementById('ob_email').value,
+        domain: document.getElementById('ob_domain').value,
+        tagline: document.getElementById('ob_tagline').value,
+        bio_short: document.getElementById('ob_bio_short').value,
+        github_url: document.getElementById('ob_github_url').value,
+        linkedin_url: document.getElementById('ob_linkedin').value,
+        llm_base_url: document.getElementById('ob_llm_base_url').value,
+        llm_model: document.getElementById('ob_llm_model').value,
+        llm_api_key: document.getElementById('ob_llm_api_key').value,
+        github_token: document.getElementById('ob_github_token').value,
+      };
+      overlay.setStep(2);
+      const out = await fetchJson('/onboarding/bootstrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      overlay.setStep(3);
+      showStatus('Bootstrap complete. Redirecting back to site...');
+      const params = new URLSearchParams(window.location.search);
+      const returnTo = params.get('return_to');
+      if (returnTo) {
+        window.location.replace(returnTo);
+        return;
+      }
+      window.location.replace('http://127.0.0.1:4321/');
+    } catch (err) {
+      showStatus(`Bootstrap failed: ${err.message}`, true);
+      addMsg(`Bootstrap failed: ${err.message}`, 'assistant');
+    } finally {
+      overlay.hide();
+      bootstrapBtn.disabled = false;
+    }
+  });
+
+  settingsBtn.addEventListener('click', () => {
+    if (workspaceEl.classList.contains('hidden')) return;
+    settingsPanel.style.display = settingsPanel.style.display === 'none' || settingsPanel.style.display === '' ? 'block' : 'none';
+  });
+
+  saveSettingsBtn.addEventListener('click', async () => {
+    saveSettingsBtn.disabled = true;
+    try {
+      await fetchJson('/settings/runtime', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          github_username: document.getElementById('set_github_username').value,
+          llm_base_url: document.getElementById('set_llm_base_url').value,
+          llm_model: document.getElementById('set_llm_model').value,
+        }),
+      });
+
+      await fetchJson('/settings/secrets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          llm_api_key: document.getElementById('set_llm_api_key').value,
+          github_token: document.getElementById('set_github_token').value,
+        }),
+      });
+
+      document.getElementById('set_llm_api_key').value = '';
+      document.getElementById('set_github_token').value = '';
+      await hydrateSettings();
+      showStatus('Settings saved.');
+    } catch (err) {
+      showStatus(`Could not save settings: ${err.message}`, true);
+    } finally {
+      saveSettingsBtn.disabled = false;
+    }
+  });
+
+  async function sendChat() {
     const text = inputEl.value.trim();
     if (!text || sendBtn.disabled) return;
-
     inputEl.value = '';
-    inputEl.style.height = '';
     sendBtn.disabled = true;
-
     addMsg(text, 'user');
 
     const pending = document.createElement('div');
@@ -197,39 +649,57 @@
     spin.className = 'spinner';
     pending.appendChild(spin);
     msgsEl.appendChild(pending);
-    msgsEl.scrollTop = msgsEl.scrollHeight;
 
     try {
-      const res = await fetch('/chat', {
+      const data = await fetchJson('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
       pending.textContent = data.reply;
       if (data.committed) pending.classList.add('committed');
     } catch (err) {
       pending.textContent = `Error: ${err.message}`;
-      pending.style.color = '#f87171';
     } finally {
       sendBtn.disabled = false;
       inputEl.focus();
     }
   }
 
-  sendBtn.addEventListener('click', send);
-  inputEl.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-  });
-  inputEl.addEventListener('input', () => {
-    inputEl.style.height = '';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 144) + 'px';
+  sendBtn.addEventListener('click', sendChat);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChat();
+    }
   });
 
   clearBtn.addEventListener('click', async () => {
-    await fetch('/chat/history', { method: 'DELETE' });
+    await fetchJson('/chat/history', { method: 'DELETE' });
     msgsEl.innerHTML = '<div class="msg system-note">History cleared.</div>';
+  });
+
+  syncBtn.addEventListener('click', async () => {
+    if (syncBtn.disabled || workspaceEl.classList.contains('hidden')) return;
+    syncBtn.disabled = true;
+    const note = addMsg('Syncing GitHub projects...', 'system-note');
+    try {
+      const data = await fetchJson('/github/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ include_forks: false, min_stars: 0 }),
+      });
+      note.textContent = data.ok ? 'GitHub sync complete.' : `GitHub sync failed: ${data.message}`;
+      if (data.ok && data.message) addMsg(data.message, 'assistant', true);
+    } catch (err) {
+      note.textContent = `GitHub sync failed: ${err.message}`;
+    } finally {
+      syncBtn.disabled = false;
+    }
+  });
+
+  loadState().catch((err) => {
+    showStatus(`Failed to load onboarding state: ${err.message}`, true);
   });
 </script>
 </body>
