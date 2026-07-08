@@ -19,5 +19,14 @@ bio:
     This is demo content for the platform repository. Replace with your own profile
     in data/user/config.yaml in your fork.
 
-home_sections: []
-about_sections: []
+home_sections:
+  - collection: teaching-education
+    title: Teaching and Education
+  - collection: open-source
+    title: Open Source
+
+about_sections:
+  - collection: teaching-education
+    title: Teaching and Education
+  - collection: open-source
+    title: Open Source

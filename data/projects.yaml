@@ -18,6 +18,47 @@ projects:
     highlights:
       - Built a complete demo portfolio entry with tags, highlights, and links
 
+  - name: lecture-latency-lab
+    display_name: Lecture Latency Lab
+    status: published
+    featured: false
+    tags: [education, analytics, python]
+    roles: [educator, data-scientist]
+    github: https://github.com/your-github-username/lecture-latency-lab
+    service_url: ''
+    package_url: ''
+    description_short: >
+      Measures where workshop sessions lose momentum by mapping Q&A timing and
+      attention shifts.
+    description_long: >
+      A fake project used to validate collection rendering and multi-project
+      membership in section previews.
+    teaching_context: >
+      Used in training cohorts to illustrate feedback loops and pacing.
+    highlights:
+      - Added timeline visualizations for participant question density
+      - Exported summary reports for post-session curriculum tuning
+
+  - name: issue-garden-cli
+    display_name: Issue Garden CLI
+    status: wip
+    featured: false
+    tags: [opensource, cli, github]
+    roles: [backend-engineer, devops]
+    github: https://github.com/your-github-username/issue-garden-cli
+    service_url: ''
+    package_url: https://pypi.org/project/issue-garden-cli/
+    description_short: >
+      Prunes stale issue queues and groups tasks into maintainable gardening
+      cycles for small open-source teams.
+    description_long: >
+      Demo CLI project for testing package links, status badges, and
+      non-featured portfolio entries.
+    teaching_context: ''
+    highlights:
+      - Automatic stale-label rules with configurable grace windows
+      - Weekly markdown digest generation for maintainers
+
   - kind: collection
     type: teaching
     name: teaching-education
@@ -34,5 +75,27 @@ projects:
       - Workshops
     members:
       - project: rubber-duck-observatory
+      - project: lecture-latency-lab
       - repo: your-github-username/teaching-notes
         label: Teaching Notes
+
+  - kind: collection
+    type: open-source
+    name: open-source
+    display_name: Open Source
+    featured: false
+    tags: [opensource, maintainer]
+    roles: [backend-engineer, devops]
+    summary: >
+      Demo collection for projects that involve public code, maintenance, and
+      community contribution workflows.
+    topics:
+      - Maintainership
+      - Contributor Experience
+    platforms:
+      - GitHub
+    members:
+      - project: rubber-duck-observatory
+      - project: issue-garden-cli
+      - repo: your-github-username/issue-garden-templates
+        label: Issue Garden Templates
