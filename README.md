@@ -17,12 +17,12 @@ The site is a static Astro build deployed over rsync to a VPS. Platform/demo dat
 - About page with configurable collection sections
 - Contact page
 - Local admin agent for making edits to runtime YAML content
-- Direct deployment commands for staging and production
 
 **Planned:**
-- GitHub agent: syncs new repos into `data/user/projects.yaml` via GitHub API + LLM descriptions
-- Resume tailoring: gap-analysis against a job posting, rewrites bullets, exports PDF
-- Social post generator: turns project highlights into LinkedIn/Bluesky drafts
+- **GitHub agent**: syncs new content or repos into `data/user/projects.yaml` via GitHub API
+- **Job search**: job board monitoring, resume tailoring & application tracking
+- **Social post generator**: turns PRs, tags or releases into LinkedIn/Bluesky drafts
+- **Project blog**: turns git history into "build-in-public" style blog posts
 
 ## Setup
 
@@ -55,14 +55,6 @@ bio:
 
 home_sections: []
 about_sections: []
-
-llm:
-  base_url: http://localhost:8080/v1   # Any OpenAI-compatible endpoint
-  model: your-model-name
-
-deploy:
-  staging_path: /opt/yoursite-staging
-  prod_path: /opt/yoursite
 ```
 
 ### 3. Edit `data/user/projects.yaml`
